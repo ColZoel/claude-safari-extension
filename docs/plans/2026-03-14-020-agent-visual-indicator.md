@@ -8,7 +8,7 @@
 
 **Tech Stack:** JavaScript (ES5-compatible), Jest + jsdom, Shadow DOM (`mode: 'open'`), CSS keyframe animation. All DOM construction uses `createElement`/`appendChild` (no `innerHTML`).
 
-**Spec:** `Specs/020-agent-visual-indicator.md`
+**Spec:** `docs/specs/020-agent-visual-indicator.md`
 **PR scope:** PR A — JS only. No Swift changes. PR B (native notifications + full cancel) is deferred.
 
 ---

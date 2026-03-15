@@ -55,9 +55,13 @@ function showIndicatorOnTab(tabId) {
   // Re-inject the content script (idempotent via installation guard), then re-send show.
   // This handles tab restore: on a freshly restored tab the content script is gone, so
   // the first sendMessage above fails silently; the re-send after injection catches it.
+  // Capture requestId so the re-send is skipped if the tool completes before executeScript
+  // resolves (prevents a stale show from arriving after the 500ms hide debounce fires).
+  var reqId = currentRequestId;
   browser.tabs.executeScript(tabId, {
     file: "content-scripts/agent-visual-indicator.js",
   }).then(function () {
+    if (currentRequestId !== reqId) return; // tool already completed — skip re-send
     browser.tabs.sendMessage(tabId, {
       type: "CLAUDE_AGENT_INDICATOR",
       action: "show",
@@ -315,7 +319,13 @@ if (typeof browser.runtime !== "undefined" && browser.runtime.onMessage) {
           console.error("indicator: failed to send cancel response:", e && e.message);
         });
       }
-      // Hide on the tab that sent Stop, or the current tool's tab
+      // Cancel any pending hide debounce so it doesn't double-hide after Stop.
+      if (hideIndicatorTimer !== null) {
+        clearTimeout(hideIndicatorTimer);
+        hideIndicatorTimer = null;
+      }
+      // Hide on the current tool's tab (PR A: Stop always originates from that tab).
+      // NOTE: senderTabId-first logic deferred to PR B when multi-tab Stop is needed.
       var senderTabId = sender && sender.tab && sender.tab.id;
       var tabToHide   = (senderTabId != null) ? senderTabId : savedToolTabId;
       if (tabToHide != null) hideIndicatorOnTab(tabToHide);
