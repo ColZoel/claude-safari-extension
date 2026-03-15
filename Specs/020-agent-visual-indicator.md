@@ -352,21 +352,24 @@ Safari versions.
 
 The background script re-injects defensively before every `show` message:
 ```js
-async function showIndicatorOnTab(tabId) {
-  try {
-    await browser.tabs.executeScript(tabId, {
-      file: "content-scripts/agent-visual-indicator.js"
-    });
-  } catch (e) {
-    console.warn("indicator re-inject failed (non-critical):", e);
-  }
-  try {
-    await browser.tabs.sendMessage(tabId, {
+// NOTE: sendMessage fires first (synchronously, before setTimeout(0) yields to executeTool)
+// to satisfy the show-before-execute ordering guarantee. executeScript then re-sends show
+// after injection to handle tab restore (content script gone on restored tabs).
+function showIndicatorOnTab(tabId) {
+  browser.tabs.sendMessage(tabId, {
+    type: "CLAUDE_AGENT_INDICATOR", action: "show"
+  }).catch(function (e) {
+    console.warn("indicator: show message failed (non-critical):", e && e.message);
+  });
+  browser.tabs.executeScript(tabId, {
+    file: "content-scripts/agent-visual-indicator.js"
+  }).then(function () {
+    browser.tabs.sendMessage(tabId, {
       type: "CLAUDE_AGENT_INDICATOR", action: "show"
-    });
-  } catch (e) {
-    console.warn("indicator show message failed (non-critical):", e);
-  }
+    }).catch(function () {});
+  }).catch(function (e) {
+    console.warn("indicator: re-inject failed (non-critical):", e && e.message);
+  });
 }
 ```
 The installation guard (`window.__claudeVisualIndicatorInstalled`) makes re-injection
