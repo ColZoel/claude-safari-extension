@@ -222,9 +222,8 @@
   });
 
   chatBtn.addEventListener('click', function () {
-    browser.tabs.create({ url: 'https://claude.ai' }).catch(function (e) {
-      console.warn('indicator: failed to open claude.ai:', e && e.message);
-    });
+    // browser.tabs is unavailable in content scripts — route through background.
+    browser.runtime.sendMessage({ type: 'OPEN_CLAUDE_TAB' }).catch(function () {});
   });
 
   dismissBtn.addEventListener('click', function () {

@@ -43,16 +43,25 @@ var SCREENSHOT_ACTIONS = { screenshot: true, zoom: true };
  * failures are logged as warnings and must never block tool execution.
  */
 function showIndicatorOnTab(tabId) {
+  // Send show immediately — works when the content script is already loaded (normal case).
+  // This must fire synchronously (before setTimeout(0) yields to executeTool) to satisfy
+  // the T_ind1 ordering guarantee.
   browser.tabs.sendMessage(tabId, {
     type: "CLAUDE_AGENT_INDICATOR",
     action: "show",
   }).catch(function (e) {
     console.warn("indicator: show message failed (non-critical):", e && e.message);
   });
-  // Re-inject the content script after sending the show message (idempotent via
-  // installation guard in the content script itself).
+  // Re-inject the content script (idempotent via installation guard), then re-send show.
+  // This handles tab restore: on a freshly restored tab the content script is gone, so
+  // the first sendMessage above fails silently; the re-send after injection catches it.
   browser.tabs.executeScript(tabId, {
     file: "content-scripts/agent-visual-indicator.js",
+  }).then(function () {
+    browser.tabs.sendMessage(tabId, {
+      type: "CLAUDE_AGENT_INDICATOR",
+      action: "show",
+    }).catch(function () {});
   }).catch(function (e) {
     console.warn("indicator: re-inject failed (non-critical):", e && e.message);
   });
@@ -311,6 +320,15 @@ if (typeof browser.runtime !== "undefined" && browser.runtime.onMessage) {
       var tabToHide   = (senderTabId != null) ? senderTabId : savedToolTabId;
       if (tabToHide != null) hideIndicatorOnTab(tabToHide);
 
+      sendResponse({ success: true });
+      return true;
+    }
+
+    if (message.type === "OPEN_CLAUDE_TAB") {
+      // browser.tabs is unavailable in content scripts; background opens the tab on their behalf.
+      browser.tabs.create({ url: "https://claude.ai" }).catch(function (e) {
+        console.warn("indicator: failed to open claude.ai tab:", e && e.message);
+      });
       sendResponse({ success: true });
       return true;
     }

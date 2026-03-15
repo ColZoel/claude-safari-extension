@@ -148,4 +148,4 @@ claude-safari-extension/
 
 - **macOS App**: Deployment target macOS 13.0+ (Ventura) for ScreenCaptureKit
 - **Safari Extension**: Safari 16.4+ for `world: "MAIN"` in `browser.scripting.executeScript`
-- **Manifest**: MV2 with `"persistent": false` for background script lifecycle
+- **Manifest**: MV2 with `"persistent": true` (required on Safari 26+ — background page never bootstraps with `false`)

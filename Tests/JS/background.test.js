@@ -618,4 +618,22 @@ describe("background.js — indicator hooks and STOP_AGENT", () => {
     onMessage({ type: "STATIC_INDICATOR_HEARTBEAT" }, {}, sendResponse);
     expect(sendResponse).toHaveBeenCalledWith({ success: true });
   });
+
+  // T_chat1 — OPEN_CLAUDE_TAB: background calls browser.tabs.create (content scripts lack browser.tabs)
+  test("T_chat1: OPEN_CLAUDE_TAB calls browser.tabs.create with claude.ai", async () => {
+    const browser = makeBrowserMockWithMessaging({
+      nativeResponses: [{ type: "idle" }],
+    });
+    browser.tabs.create = jest.fn(() => Promise.resolve());
+    const onMessage = loadBackgroundWithMessaging({ browser });
+
+    await Promise.resolve();
+
+    const sendResponse = jest.fn();
+    onMessage({ type: "OPEN_CLAUDE_TAB" }, {}, sendResponse);
+    await Promise.resolve();
+
+    expect(browser.tabs.create).toHaveBeenCalledWith({ url: "https://claude.ai" });
+    expect(sendResponse).toHaveBeenCalledWith({ success: true });
+  });
 });

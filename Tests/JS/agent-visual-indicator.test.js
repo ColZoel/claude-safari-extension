@@ -14,7 +14,7 @@
  * T8  - static hide: host loses 'static-active' class
  * T9  - stop button click: browser.runtime.sendMessage called with STOP_AGENT
  * T10 - stop button click: agent-active class removed
- * T11 - chat button click: browser.tabs.create called with claude.ai URL
+ * T11 - chat button click: sendMessage called with OPEN_CLAUDE_TAB (browser.tabs unavailable in content scripts)
  * T12 - dismiss button click: sendMessage called with DISMISS_STATIC_INDICATOR_FOR_GROUP
  * T13 - heartbeat: response.success=false hides static indicator
  * T14 - heartbeat: rejected promise hides static indicator
@@ -145,12 +145,12 @@ describe('agent-visual-indicator content script', function () {
     expect(result.host.classList.contains('agent-active')).toBe(false);
   });
 
-  // T11 - chat button: browser.tabs.create({ url: 'https://claude.ai' })
-  test('T11: chat button click opens claude.ai in a new tab', function () {
+  // T11 - chat button: sendMessage OPEN_CLAUDE_TAB (browser.tabs unavailable in content scripts)
+  test('T11: chat button click sends OPEN_CLAUDE_TAB message to background', function () {
     var result = loadIndicator();
     var chatButton = result.host.shadowRoot.querySelector('#claude-static-chat-button');
     chatButton.click();
-    expect(result.tabsCreate).toHaveBeenCalledWith({ url: 'https://claude.ai' });
+    expect(result.sendMessage).toHaveBeenCalledWith({ type: 'OPEN_CLAUDE_TAB' });
   });
 
   // T12 - dismiss button: sendMessage({ type: 'DISMISS_STATIC_INDICATOR_FOR_GROUP' })
