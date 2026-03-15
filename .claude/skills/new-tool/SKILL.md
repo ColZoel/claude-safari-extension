@@ -15,7 +15,7 @@ Follow every step in order. Do not skip pre-work or manifest steps — both are 
 git checkout -b feature/<tool-name>
 ```
 
-- Read `Specs/NNN-<tool-name>.md` before touching any code
+- Read `docs/specs/NNN-<tool-name>.md` before touching any code
 - Confirm tool file location: `ClaudeInSafari Extension/Resources/tools/<tool-name>.js`
 
 ---

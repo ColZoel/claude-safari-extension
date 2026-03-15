@@ -1,6 +1,6 @@
 /**
  * Tests for tools/navigate.js
- * Covers all test cases defined in Specs/008-navigate.md (T1–T7),
+ * Covers all test cases defined in docs/specs/008-navigate.md (T1–T7),
  * plus supplementary cases T5b–T5c, T8–T19.
  *
  * Key mock challenges:
