@@ -1,7 +1,7 @@
 /**
  * navigate — URL navigation and history traversal.
  * Implements the "navigate" MCP tool.
- * See Specs/008-navigate.md.
+ * See docs/specs/008-navigate.md.
  *
  * Depends on: globalThis.resolveTab (exported by tools/tabs-manager.js)
  */

@@ -18,9 +18,9 @@ Foundational plumbing: MCP socket server, message framing, native↔extension br
 
 | Item | Spec | Status |
 |------|------|--------|
-| Unix domain socket server (GCD) | [001](Specs/001-mcp-socket-server.md) | ✅ |
-| Newline-delimited JSON framing | [002](Specs/002-message-framing.md) | ✅ |
-| Native ↔ extension bridge (`SafariWebExtensionHandler`) | [003](Specs/003-native-extension-bridge.md) | ✅ |
+| Unix domain socket server (GCD) | [001](docs/specs/001-mcp-socket-server.md) | ✅ |
+| Newline-delimited JSON framing | [002](docs/specs/002-message-framing.md) | ✅ |
+| Native ↔ extension bridge (`SafariWebExtensionHandler`) | [003](docs/specs/003-native-extension-bridge.md) | ✅ |
 
 ---
 
@@ -30,8 +30,8 @@ Tool dispatch layer, background script, tab group management, content script sca
 
 | Item | Spec | Status |
 |------|------|--------|
-| Tool registry (`registerTool` / dispatch) | [004](Specs/004-tool-registry.md) | ✅ |
-| Tab group manager (`tabs_context_mcp`, `tabs_create_mcp`) | [013](Specs/013-tabs-manager.md) | ✅ |
+| Tool registry (`registerTool` / dispatch) | [004](docs/specs/004-tool-registry.md) | ✅ |
+| Tab group manager (`tabs_context_mcp`, `tabs_create_mcp`) | [013](docs/specs/013-tabs-manager.md) | ✅ |
 | Background script event loop + polling | — | ✅ |
 | Accessibility tree content script | — | ✅ |
 | Console monitor content script | — | ✅ |
@@ -46,7 +46,7 @@ URL navigation and browser history traversal.
 
 | Item | Spec | Status |
 |------|------|--------|
-| `navigate` — URL nav, back/forward | [008](Specs/008-navigate.md) | ✅ |
+| `navigate` — URL nav, back/forward | [008](docs/specs/008-navigate.md) | ✅ |
 
 ---
 
@@ -86,10 +86,10 @@ Read DOM structure, find elements, fill forms, extract text.
 
 | Item | Spec | Status |
 |------|------|--------|
-| `read_page` — accessibility tree snapshot | [005](Specs/005-read-page.md) | ✅ |
-| `find` — natural language element search | [006](Specs/006-find.md) | ✅ |
-| `form_input` — fill inputs, checkboxes, selects | [007](Specs/007-form-input.md) | ✅ |
-| `get_page_text` — extract article/main text | [009](Specs/009-get-page-text.md) | ✅ |
+| `read_page` — accessibility tree snapshot | [005](docs/specs/005-read-page.md) | ✅ |
+| `find` — natural language element search | [006](docs/specs/006-find.md) | ✅ |
+| `form_input` — fill inputs, checkboxes, selects | [007](docs/specs/007-form-input.md) | ✅ |
+| `get_page_text` — extract article/main text | [009](docs/specs/009-get-page-text.md) | ✅ |
 
 ---
 
@@ -111,9 +111,9 @@ Mouse, keyboard, scroll simulation; page-context JS execution; screenshots.
 
 | Item | Spec | Status |
 |------|------|--------|
-| `computer` — mouse, keyboard, scroll actions | [010](Specs/010-computer-mouse-keyboard.md) | ✅ |
-| `computer` (screenshot) — ScreenCaptureKit | [011](Specs/011-computer-screenshot.md) | ✅ |
-| `javascript_tool` — execute JS in page context | [012](Specs/012-javascript-tool.md) | ✅ |
+| `computer` — mouse, keyboard, scroll actions | [010](docs/specs/010-computer-mouse-keyboard.md) | ✅ |
+| `computer` (screenshot) — ScreenCaptureKit | [011](docs/specs/011-computer-screenshot.md) | ✅ |
+| `javascript_tool` — execute JS in page context | [012](docs/specs/012-javascript-tool.md) | ✅ |
 
 ---
 
@@ -123,12 +123,12 @@ Console/network capture, window management, GIF recording, file upload.
 
 | Item | Spec | Status |
 |------|------|--------|
-| `read_console_messages` | [014](Specs/014-read-console.md) | ✅ |
-| `read_network_requests` | [015](Specs/015-read-network.md) | ✅ |
-| `resize_window` — AppleScript window management | [016](Specs/016-resize-window.md) | ✅ |
-| `gif_creator` — record, stop, export animated GIFs | [017](Specs/017-gif-creator.md) | ✅ |
-| `upload_image` — screenshot/image to page element | [018](Specs/018-upload-image.md) | ✅ |
-| `file_upload` — local file to file input | [019](Specs/019-file-upload.md) | ✅ |
+| `read_console_messages` | [014](docs/specs/014-read-console.md) | ✅ |
+| `read_network_requests` | [015](docs/specs/015-read-network.md) | ✅ |
+| `resize_window` — AppleScript window management | [016](docs/specs/016-resize-window.md) | ✅ |
+| `gif_creator` — record, stop, export animated GIFs | [017](docs/specs/017-gif-creator.md) | ✅ |
+| `upload_image` — screenshot/image to page element | [018](docs/specs/018-upload-image.md) | ✅ |
+| `file_upload` — local file to file input | [019](docs/specs/019-file-upload.md) | ✅ |
 
 ### Phase 6 Future Items (gif_creator)
 
@@ -148,7 +148,7 @@ App Store or notarized DMG distribution, onboarding UX, documentation.
 |------|--------|
 | App Store submission (or notarized DMG) | ⬜ |
 | Setup wizard / onboarding UI | ⬜ |
-| `agent-visual-indicator` refinement ([020](Specs/020-agent-visual-indicator.md)) | 📋 |
+| `agent-visual-indicator` refinement ([020](docs/specs/020-agent-visual-indicator.md)) | 📋 |
 | Remaining medium/low REVIEW.md findings (M3–M7, L1–L5) | ⬜ |
 | Full test coverage for all Swift classes | ⬜ |
 

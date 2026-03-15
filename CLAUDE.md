@@ -60,7 +60,7 @@ Every PR review MUST verify all three areas:
 ### 2. STRUCTURE.md Compliance
 - **Tool handlers**: one file per MCP tool, placed in `ClaudeInSafari Extension/Resources/tools/`, named in kebab-case.
 - **Tests**: JavaScript tests in `Tests/JS/` named `<source-file>.test.js`.
-- **Specs**: one file per feature in `Specs/`, named `NNN-description.md`.
+- **Specs**: one file per feature in `docs/specs/`, named `NNN-description.md`.
 - **No new files** outside the canonical layout without user approval (PRINCIPLES.md rule 5).
 - **Background script load order**: each new tool file added to `manifest.json` background.scripts MUST also be reflected in the load-order comment in `background.js`.
 

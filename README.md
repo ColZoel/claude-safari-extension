@@ -66,7 +66,7 @@ See [STRUCTURE.md](STRUCTURE.md) for the full canonical directory layout.
 ClaudeInSafari/            # macOS app — MCP server, screenshots, AppleScript
 ClaudeInSafari Extension/  # Safari Web Extension — tool handlers, content scripts
 Shared/                    # Constants shared between both targets
-Specs/                     # Feature specifications (written before code)
+docs/specs/                     # Feature specifications (written before code)
 Tests/                     # Swift unit tests
 ```
 
@@ -74,14 +74,14 @@ Tests/                     # Swift unit tests
 
 This project follows the principles in [PRINCIPLES.md](PRINCIPLES.md):
 
-1. **Spec first** — write a spec in `Specs/` before any implementation.
+1. **Spec first** — write a spec in `docs/specs/` before any implementation.
 2. **Test first** — write a passing test before marking a feature complete.
 3. **Iterative commits** — commit each small batch of working code.
 4. **Structure compliance** — all files must be placed per `STRUCTURE.md`.
 
 ### Adding a New Tool
 
-1. Write a spec: `Specs/<NNN>-<tool-name>.md`
+1. Write a spec: `docs/specs/<NNN>-<tool-name>.md`
 2. Write tests: `Tests/` (Swift) or `Tests/js/` (JavaScript)
 3. Implement in the matching file from `STRUCTURE.md`
 4. Register the tool in `tool-registry.js`

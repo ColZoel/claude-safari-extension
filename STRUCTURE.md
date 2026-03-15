@@ -108,32 +108,31 @@ claude-safari-extension/
 │   ├── mcp-test.py                          # MCP socket test client (handshake + tool calls)
 │   └── validate-injected-scripts.js         # CI: syntax-check IIFE code strings in tool files
 │
-├── docs/
-│   ├── debugging.md                         # Extension troubleshooting guide (read before debugging)
-│   ├── regression-tests.md                  # Manual regression checklist
-│   └── plans/                               # Implementation plans (one per feature, YYYY-MM-DD-<feature>.md)
-│
-└── Specs/                                   # Feature specifications (one per feature)
-    ├── 001-mcp-socket-server.md             # Unix domain socket server
-    ├── 002-message-framing.md               # 4-byte BE length-prefix protocol
-    ├── 003-native-extension-bridge.md       # SafariWebExtensionHandler communication
-    ├── 004-tool-registry.md                 # Tool dispatch framework
-    ├── 005-read-page.md                     # Accessibility tree extraction
-    ├── 006-find.md                          # Natural language element search
-    ├── 007-form-input.md                    # Form value setting
-    ├── 008-navigate.md                      # URL navigation
-    ├── 009-get-page-text.md                 # Page text extraction
-    ├── 010-computer-mouse-keyboard.md       # Mouse/keyboard/scroll simulation
-    ├── 011-computer-screenshot.md           # Screenshot via ScreenCaptureKit
-    ├── 012-javascript-tool.md               # Page-context JS execution
-    ├── 013-tabs-manager.md                  # Virtual tab group management
-    ├── 014-read-console.md                  # Console message capture
-    ├── 015-read-network.md                  # Network request capture
-    ├── 016-resize-window.md                 # Window resize via AppleScript
-    ├── 017-gif-creator.md                   # GIF recording and export
-    ├── 018-upload-image.md                  # Image upload to page elements
-    ├── 019-file-upload.md                   # Local file upload
-    └── 020-agent-visual-indicator.md        # Agent activity overlay
+└── docs/
+    ├── debugging.md                         # Extension troubleshooting guide (read before debugging)
+    ├── regression-tests.md                  # Manual regression checklist
+    ├── plans/                               # Implementation plans (one per feature, YYYY-MM-DD-<feature>.md)
+    └── specs/                               # Feature specifications (one per feature)
+        ├── 001-mcp-socket-server.md         # Unix domain socket server
+        ├── 002-message-framing.md           # Newline-delimited JSON framing
+        ├── 003-native-extension-bridge.md   # SafariWebExtensionHandler communication
+        ├── 004-tool-registry.md             # Tool dispatch framework
+        ├── 005-read-page.md                 # Accessibility tree extraction
+        ├── 006-find.md                      # Natural language element search
+        ├── 007-form-input.md                # Form value setting
+        ├── 008-navigate.md                  # URL navigation
+        ├── 009-get-page-text.md             # Page text extraction
+        ├── 010-computer-mouse-keyboard.md   # Mouse/keyboard/scroll simulation
+        ├── 011-computer-screenshot.md       # Screenshot via ScreenCaptureKit
+        ├── 012-javascript-tool.md           # Page-context JS execution
+        ├── 013-tabs-manager.md              # Virtual tab group management
+        ├── 014-read-console.md              # Console message capture
+        ├── 015-read-network.md              # Network request capture
+        ├── 016-resize-window.md             # Window resize via AppleScript
+        ├── 017-gif-creator.md               # GIF recording and export
+        ├── 018-upload-image.md              # Image upload to page elements
+        ├── 019-file-upload.md               # Local file upload
+        └── 020-agent-visual-indicator.md    # Agent activity overlay
 ```
 
 ## Naming Conventions
