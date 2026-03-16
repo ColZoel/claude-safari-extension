@@ -1,4 +1,13 @@
 import Foundation
+import UserNotifications
+
+/// Abstraction over UNUserNotificationCenter for notification posting.
+/// Enables injection of a mock in unit tests without hitting the real system.
+protocol NotificationCenterProtocol: AnyObject {
+    func add(_ request: UNNotificationRequest, withCompletionHandler completionHandler: ((Error?) -> Void)?)
+}
+
+extension UNUserNotificationCenter: NotificationCenterProtocol {}
 
 /// Routes incoming MCP JSON-RPC 2.0 requests to the appropriate handler.
 /// Implements the MCP stdio transport protocol: initialize handshake, tools/list, and tools/call.
@@ -8,6 +17,7 @@ class ToolRouter: MCPSocketServerDelegate {
     private let appleScriptBridge = AppleScriptBridge()
     private let gifService: GifService
     private let fileService: FileService
+    private let notificationCenter: NotificationCenterProtocol
 
     // Production init — all services created fresh
     convenience init() {
@@ -18,11 +28,13 @@ class ToolRouter: MCPSocketServerDelegate {
         )
     }
 
-    // Testable init — inject mock services for unit tests
-    init(screenshotService: ScreenshotService, gifService: GifService, fileService: FileService) {
+    // Testable init — inject mock services and notification center for unit tests
+    init(screenshotService: ScreenshotService, gifService: GifService, fileService: FileService,
+         notificationCenter: NotificationCenterProtocol = UNUserNotificationCenter.current()) {
         self.screenshotService = screenshotService
         self.gifService = gifService
         self.fileService = fileService
+        self.notificationCenter = notificationCenter
     }
 
     /// Staging set for native tools whose handler branch is not yet wired up in handleToolCall().
@@ -38,8 +50,99 @@ class ToolRouter: MCPSocketServerDelegate {
     private var pendingToolContext = [String: (toolName: String, arguments: [String: Any])]()
     private let pendingRequestsLock = NSLock()
 
+    // MARK: - Notification state
+    /// Minimum interval (seconds) between successive automation notifications.
+    private static let notificationDebounceInterval: TimeInterval = 10
+
+    /// Date of the last automation notification. Internal for testability (manipulated in tests).
+    var lastNotificationDate: Date? = nil
+
+    /// Set when a Stop action fires while a native tool is in-flight.
+    /// Completion handlers check this flag and return a "Cancelled by user" error instead of
+    /// the result.
+    /// Protected by `pendingRequestsLock` on all reads and writes.
+    /// Best-effort: two races are still possible:
+    ///   1. The completion handler fires and reads the flag before cancelCurrentRequest() sets it
+    ///      — result is delivered normally.
+    ///   2. cancelCurrentRequest() sets the flag but then a completion handler that was already
+    ///      dispatched completes after the next call's handler has already started — extremely
+    ///      unlikely given serial dispatch patterns.
+    /// Worst case for both: the result is delivered instead of an error (acceptable).
+    /// Reset to false by whichever completion handler reads it as true.
+    /// Internal for testability.
+    /// Also reset to false at the start of each handleToolCall so a Stop click
+    /// with no in-flight native tool does not poison the next native call.
+    var nativeCallCancelled = false
+
     func setServer(_ server: MCPSocketServer) {
         self.server = server
+    }
+
+    /// Test hook — injects a pending request entry so cancelCurrentRequest can be
+    /// tested without standing up a real extension IPC channel.
+    /// Internal (not private) for @testable access; has no effect in production.
+    func injectPendingRequest(requestId: String, clientId: String, jsonrpcId: Any?) {
+        pendingRequestsLock.lock()
+        pendingRequests[requestId] = (clientId: clientId, jsonrpcId: jsonrpcId)
+        pendingRequestsLock.unlock()
+    }
+
+    // MARK: - Notifications
+
+    /// Post a macOS Notification Center alert announcing that automation is active.
+    /// Debounced: silently skipped if a notification was posted in the last 10 seconds
+    /// so rapid back-to-back tool calls only show one notification per sequence.
+    /// Internal for testability (called from handleToolCall).
+    func postAutomationNotification(toolName: String) {
+        pendingRequestsLock.lock()
+        let shouldSkip: Bool
+        if let last = lastNotificationDate, Date().timeIntervalSince(last) < Self.notificationDebounceInterval {
+            shouldSkip = true
+        } else {
+            lastNotificationDate = Date()
+            shouldSkip = false
+        }
+        pendingRequestsLock.unlock()
+
+        if shouldSkip { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = "Claude is automating Safari"
+        content.body = "Running: \(toolName)"
+        content.sound = nil
+        content.categoryIdentifier = "claude-automation"
+
+        let request = UNNotificationRequest(
+            identifier: "claude-automation-active",
+            content: content,
+            trigger: nil
+        )
+        notificationCenter.add(request) { error in
+            if let error = error {
+                NSLog("postAutomationNotification: failed to deliver notification for tool '%@': %@ (code %d)",
+                      toolName, (error as NSError).domain, (error as NSError).code)
+            }
+        }
+    }
+
+    /// Cancel all in-flight requests — called by AppDelegate when the "Stop Claude"
+    /// notification action fires.
+    /// • Extension-forwarded calls: immediately fails all entries in `pendingRequests`
+    ///   with a "Cancelled by user" error response.
+    /// • Native calls (screenshot, gif, resize_window): sets `nativeCallCancelled` so
+    ///   each completion handler sends an error instead of the result (best-effort).
+    /// The flag is NOT reset here — each native completion handler resets it to false
+    /// when it fires, ensuring it remains true long enough for any in-flight handler
+    /// to observe it.
+    func cancelCurrentRequest() {
+        pendingRequestsLock.lock()
+        nativeCallCancelled = true
+        let toCancel = Array(pendingRequests.keys)
+        pendingRequestsLock.unlock()
+
+        for requestId in toCancel {
+            failPendingRequest(requestId: requestId, message: "Cancelled by user")
+        }
     }
 
     // MARK: - MCPSocketServerDelegate
@@ -106,6 +209,17 @@ class ToolRouter: MCPSocketServerDelegate {
 
         let arguments = (params?["arguments"] as? [String: Any]) ?? [:]
 
+        // Clear any lingering cancellation flag from a previous Stop action before
+        // starting new work. Native completion handlers clear it when they observe
+        // it; this is the fallback for the case where Stop was clicked with no
+        // native tool in-flight (preventing the flag from poisoning this new call).
+        pendingRequestsLock.lock()
+        nativeCallCancelled = false
+        pendingRequestsLock.unlock()
+
+        // Post automation notification (debounced 10s; fire-and-forget — never blocks tool execution)
+        postAutomationNotification(toolName: toolName)
+
         if toolName == "computer",
            let action = arguments["action"] as? String,
            action == "screenshot" || action == "zoom" {
@@ -139,6 +253,14 @@ class ToolRouter: MCPSocketServerDelegate {
         if action == "screenshot" {
             screenshotService.captureScreenshot(tabId: tabIdOpt) { [weak self] result in
                 guard let self else { return }
+                self.pendingRequestsLock.lock()
+                let cancelled = self.nativeCallCancelled
+                if cancelled { self.nativeCallCancelled = false }
+                self.pendingRequestsLock.unlock()
+                guard !cancelled else {
+                    self.sendError(id: id, code: -32000, message: "Cancelled by user", to: clientId)
+                    return
+                }
                 sendScreenshotResult(result, id: id, to: clientId)
                 if case .success(_) = result {
                     maybeAddGifFrame(tabId: tabId, action: "screenshot", coordinate: nil)
@@ -162,6 +284,14 @@ class ToolRouter: MCPSocketServerDelegate {
             }()
             screenshotService.captureZoom(tabId: tabIdOpt, region: region) { [weak self] result in
                 guard let self else { return }
+                self.pendingRequestsLock.lock()
+                let cancelled = self.nativeCallCancelled
+                if cancelled { self.nativeCallCancelled = false }
+                self.pendingRequestsLock.unlock()
+                guard !cancelled else {
+                    self.sendError(id: id, code: -32000, message: "Cancelled by user", to: clientId)
+                    return
+                }
                 sendScreenshotResult(result, region: region, id: id, to: clientId)
                 if case .success(_) = result {
                     maybeAddGifFrame(tabId: tabId, action: "zoom", coordinate: nil)
@@ -254,6 +384,14 @@ class ToolRouter: MCPSocketServerDelegate {
                 }
                 return
             }
+            self.pendingRequestsLock.lock()
+            let cancelled = self.nativeCallCancelled
+            if cancelled { self.nativeCallCancelled = false }
+            self.pendingRequestsLock.unlock()
+            guard !cancelled else {
+                self.sendError(id: id, code: -32000, message: "Cancelled by user", to: clientId)
+                return
+            }
             switch self.gifService.exportGIF(tabId: tabId, options: options) {
             case .failure(let error):
                 let msg: String
@@ -340,6 +478,14 @@ class ToolRouter: MCPSocketServerDelegate {
         // requires extension routing which is not yet implemented (Spec 016 §Window Resolution).
         appleScriptBridge.resizeWindow(width: Int(w), height: Int(h)) { [weak self] result in
             guard let self else { return }
+            self.pendingRequestsLock.lock()
+            let cancelled = self.nativeCallCancelled
+            if cancelled { self.nativeCallCancelled = false }
+            self.pendingRequestsLock.unlock()
+            guard !cancelled else {
+                self.sendError(id: id, code: -32000, message: "Cancelled by user", to: clientId)
+                return
+            }
             switch result {
             case .success(var message):
                 if tabIdSupplied {
@@ -670,7 +816,11 @@ class ToolRouter: MCPSocketServerDelegate {
             NSLog("ToolRouter: failed to serialize JSON response")
             return
         }
-        server?.send(data: data, to: clientId)
+        guard let server = server else {
+            NSLog("ToolRouter: sendJSON — server is nil, dropping response to client '%@'", clientId)
+            return
+        }
+        server.send(data: data, to: clientId)
     }
 
     // MARK: - Tool Definitions
