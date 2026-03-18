@@ -31,3 +31,4 @@ node_modules/
 *.sock
 *.profraw
 .worktrees/
+.superpowers/
