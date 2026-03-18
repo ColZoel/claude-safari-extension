@@ -12,8 +12,10 @@ claude-safari-extension/
 │   ├── ClaudeInSafari.xcodeproj
 │   │
 │   ├── ClaudeInSafari/                      # macOS App Target
+│   │   ├── Assets.xcassets/                  # Asset catalog (AppIcon)
 │   │   ├── App/
 │   │   │   ├── AppDelegate.swift            # App lifecycle — wires menu bar, onboarding, MCP server, notifications
+│   │   │   ├── BrandColors.swift            # NSColor extension: claudeOrange, claudeOrangeLight
 │   │   │   ├── MenuBarController.swift      # NSStatusItem, MenuBarState enum, icon compositing, menu construction
 │   │   │   ├── OnboardingWindowController.swift  # 5-screen setup wizard: Welcome → 3 permission steps → Done
 │   │   │   └── PermissionMonitor.swift      # PermissionChecking protocol, SystemPermissionChecker, polling
@@ -112,6 +114,7 @@ claude-safari-extension/
 │
 ├── Makefile                                 # Dev workflow: build, run, test, send tool calls
 ├── scripts/                                 # Development and testing scripts
+│   ├── generate-app-icon.swift              # Generate AppIcon PNGs for macOS asset catalog
 │   ├── mcp-test.py                          # MCP socket test client (handshake + tool calls)
 │   └── validate-injected-scripts.js         # CI: syntax-check IIFE code strings in tool files
 │
