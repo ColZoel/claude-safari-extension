@@ -207,9 +207,9 @@ final class MenuBarController {
 
     private var titleText: String {
         switch state {
-        case .connected:           return "Claude in Safari"
+        case .connected:           return AppConstants.appDisplayName
         case .needsAttention:      return "Action Required"
-        case .notConnected:        return "Claude in Safari"
+        case .notConnected:        return AppConstants.appDisplayName
         }
     }
 

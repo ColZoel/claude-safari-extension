@@ -5,8 +5,12 @@
 
 import Cocoa
 
-// Claude brand orange (#D97757) — keep in sync with BrandColors.swift
-let brandOrange = NSColor(srgbRed: 0.851, green: 0.467, blue: 0.341, alpha: 1)
+// Read color from CLI arg or use default
+let brandHex = CommandLine.arguments.count > 1 ? CommandLine.arguments[1] : "D97757"
+let r = Double(Int(brandHex.prefix(2), radix: 16)!) / 255.0
+let g = Double(Int(brandHex.dropFirst(2).prefix(2), radix: 16)!) / 255.0
+let b = Double(Int(brandHex.dropFirst(4).prefix(2), radix: 16)!) / 255.0
+let brandOrange = NSColor(srgbRed: CGFloat(r), green: CGFloat(g), blue: CGFloat(b), alpha: 1)
 
 /// Renders the icon at exact pixel dimensions using NSBitmapImageRep
 /// (bypasses Retina backing-scale that lockFocus would apply).

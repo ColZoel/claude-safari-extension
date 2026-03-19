@@ -38,6 +38,11 @@ enum AppConstants {
         appGroupContainerURL?.appendingPathComponent("extension_generation")
     }
 
+    // MARK: - Branding
+    static let appDisplayName = "Claude in Safari"
+    static let brandColorHex = "#D97757"
+    static let updateURL = URL(string: "https://github.com/anthropics/claude-safari-extension/releases")!
+
     /// File names for App Group communication.
     enum UserDefaultsKeys {
         /// File name for the FIFO queue of pending tool requests (within the App Group container).

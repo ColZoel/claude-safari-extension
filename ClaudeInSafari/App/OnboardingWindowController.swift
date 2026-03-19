@@ -51,7 +51,7 @@ final class OnboardingWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = "Claude in Safari"
+        window.title = AppConstants.appDisplayName
         window.center()
         window.isReleasedWhenClosed = false
         super.init(window: window)
@@ -249,7 +249,7 @@ final class OnboardingWindowController: NSWindowController {
         let subSteps: [(String, String)] = [
             ("1", "Open Safari → Settings → Advanced and enable \"Show features for web developers\""),
             ("2", "In the Develop menu, click \"Allow Unsigned Extensions\""),
-            ("3", "Go to Safari → Settings → Extensions and turn on Claude in Safari")
+            ("3", "Go to Safari → Settings → Extensions and turn on \(AppConstants.appDisplayName)")
         ]
         var y = subtitle.frame.minY - 14
         for (num, text) in subSteps {
@@ -342,7 +342,7 @@ final class OnboardingWindowController: NSWindowController {
         body.frame = NSRect(x: Layout.padding, y: title.frame.minY - 54, width: Layout.windowWidth - Layout.padding * 2, height: 48)
         root.addSubview(body)
 
-        let instructionBox = makeInstructionBox("Open System Settings → Privacy & Security → Screen Recording and enable Claude in Safari")
+        let instructionBox = makeInstructionBox("Open System Settings → Privacy & Security → Screen Recording and enable \(AppConstants.appDisplayName)")
         instructionBox.frame = NSRect(x: Layout.padding, y: body.frame.minY - 68, width: Layout.windowWidth - Layout.padding * 2, height: 56)
         root.addSubview(instructionBox)
 
