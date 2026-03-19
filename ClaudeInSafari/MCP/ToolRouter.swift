@@ -747,7 +747,7 @@ class ToolRouter: MCPSocketServerDelegate {
                 resolvedURLs.append(url)
             } else {
                 NSLog("readAndForwardFiles: failed to resolve security-scoped access for '%@'", path)
-                for url in resolvedURLs { fileAccessManager.stopAccess(for: url) }
+                // defer handles stopAccess cleanup on all return paths
                 sendError(id: id, code: -32000,
                           message: "File access failed — could not resolve security-scoped access for '\(path)'. Try re-granting folder access.",
                           to: clientId)
