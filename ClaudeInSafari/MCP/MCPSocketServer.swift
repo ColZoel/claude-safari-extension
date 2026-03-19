@@ -25,6 +25,7 @@ class MCPSocketServer {
 
     private(set) var socketPath: String = ""
     private(set) var isListening: Bool = false
+    private var legacySymlinkPath: String?
 
     init(framer: MessageFramer) {
         self.framer = framer
@@ -42,6 +43,12 @@ class MCPSocketServer {
         let directory = socketDirURL.path
         let pid = ProcessInfo.processInfo.processIdentifier
         socketPath = "\(directory)/\(pid).sock"
+
+        // macOS sun_path limit is 104 bytes; fail early with a clear error.
+        let sunPathLimit = MemoryLayout.size(ofValue: sockaddr_un().sun_path)
+        guard socketPath.utf8.count < sunPathLimit else {
+            throw MCPSocketServerError.socketCreationFailed(ENAMETOOLONG)
+        }
 
         // Create directory with 0700 permissions
         try FileManager.default.createDirectory(
@@ -119,6 +126,7 @@ class MCPSocketServer {
                 }
             }
             try FileManager.default.createSymbolicLink(atPath: legacySocketPath, withDestinationPath: socketPath)
+            self.legacySymlinkPath = legacySocketPath
             NSLog("MCPSocketServer: created legacy symlink \(legacySocketPath) -> \(socketPath)")
         } catch {
             NSLog("MCPSocketServer: WARNING — could not create legacy symlink at \(legacySocketPath): \(error). CLI must use App Group path.")
@@ -149,6 +157,11 @@ class MCPSocketServer {
         }
 
         unlink(socketPath)
+
+        if let legacyPath = legacySymlinkPath {
+            unlink(legacyPath)
+            legacySymlinkPath = nil
+        }
     }
 
     /// Send framed data to a specific client.
