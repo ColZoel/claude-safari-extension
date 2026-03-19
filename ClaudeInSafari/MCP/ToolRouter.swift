@@ -710,8 +710,18 @@ class ToolRouter: MCPSocketServerDelegate {
         let needsPrompt = paths.contains { fileAccessManager.needsAccessPrompt(for: $0) }
         if needsPrompt {
             DispatchQueue.main.async { [self] in
-                // Loop until all paths are covered — each grant may cover multiple files
+                // Loop until all paths are covered — each grant may cover multiple files.
+                // Safety limit prevents infinite loop if path normalization causes a mismatch.
+                var attempts = 0
                 while let ungrantedPath = paths.first(where: { self.fileAccessManager.needsAccessPrompt(for: $0) }) {
+                    attempts += 1
+                    if attempts > paths.count + 1 {
+                        NSLog("handleFileUpload: safety limit hit — %d prompts for %d paths", attempts, paths.count)
+                        self.sendError(id: id, code: -32000,
+                                       message: "File access could not be granted — the selected folder may not cover the requested files",
+                                       to: clientId)
+                        return
+                    }
                     guard self.fileAccessManager.requestAccess(for: ungrantedPath) else {
                         self.sendError(id: id, code: -32000,
                                        message: "File access denied — user cancelled the folder access prompt",
