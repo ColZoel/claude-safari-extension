@@ -26,8 +26,6 @@
 	<true/>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
-	<key>NSAppleEventsUsageDescription</key>
-	<string>Claude in Safari uses Apple Events to resize Safari windows for browser automation.</string>
 	<key>NSScreenCaptureUsageDescription</key>
 	<string>Claude in Safari captures screenshots to help Claude Code see and automate the browser.</string>
 </dict>

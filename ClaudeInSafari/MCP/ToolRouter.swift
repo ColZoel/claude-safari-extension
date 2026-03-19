@@ -15,7 +15,6 @@ extension UNUserNotificationCenter: NotificationCenterProtocol {}
 class ToolRouter: MCPSocketServerDelegate {
     private weak var server: MCPSocketServer?
     private let screenshotService: ScreenshotService
-    private let appleScriptBridge = AppleScriptBridge()
     private let gifService: GifService
     private let fileService: FileService
     private let notificationCenter: NotificationCenterProtocol
@@ -355,8 +354,6 @@ class ToolRouter: MCPSocketServerDelegate {
            let action = arguments["action"] as? String,
            action == "screenshot" || action == "zoom" {
             handleScreenshotAction(action: action, arguments: arguments, id: id, clientId: clientId)
-        } else if toolName == "resize_window" {
-            handleResizeWindow(arguments: arguments, id: id, clientId: clientId)
         } else if toolName == "gif_creator" {
             handleGifCreator(arguments: arguments, id: id, clientId: clientId)
         } else if toolName == "upload_image" {
@@ -597,41 +594,10 @@ class ToolRouter: MCPSocketServerDelegate {
 
     // MARK: - Native Window Resize
 
+    /// Disabled for App Store compatibility (Spec 026). AppleScriptBridge is preserved
+    /// in the codebase for future re-enablement via browser.windows.update() or similar.
     private func handleResizeWindow(arguments: [String: Any], id: Any?, clientId: String) {
-        guard let (w, h) = parseResizeDimensions(arguments) else {
-            if arguments["width"] == nil || arguments["height"] == nil {
-                sendError(id: id, code: -32000, message: "Both width and height parameters are required", to: clientId)
-            } else {
-                sendError(id: id, code: -32000, message: "Width and height must be numbers", to: clientId)
-            }
-            return
-        }
-
-        // Truncate to integers per spec (e.g. 1024.7 → 1024).
-        // Note: values near the 200-pixel minimum truncate down — 199.9 becomes 199 and will fail validation.
-        let tabIdSupplied = arguments["tabId"] != nil
-        // Warn callers that tabId is accepted but ignored — tabId→window resolution
-        // requires extension routing which is not yet implemented (Spec 016 §Window Resolution).
-        appleScriptBridge.resizeWindow(width: Int(w), height: Int(h)) { [weak self] result in
-            guard let self else { return }
-            self.pendingRequestsLock.lock()
-            let cancelled = self.nativeCallCancelled
-            if cancelled { self.nativeCallCancelled = false }
-            self.pendingRequestsLock.unlock()
-            guard !cancelled else {
-                self.sendError(id: id, code: -32000, message: "Cancelled by user", to: clientId)
-                return
-            }
-            switch result {
-            case .success(var message):
-                if tabIdSupplied {
-                    message += " (tabId ignored — always resizes the frontmost Safari window)"
-                }
-                sendResult(id: id, result: ["content": [["type": "text", "text": message]]], to: clientId)
-            case .failure(let error):
-                sendError(id: id, code: -32000, message: error.userMessage, to: clientId)
-            }
-        }
+        sendError(id: id, code: -32000, message: "resize_window is temporarily disabled (App Store compatibility)", to: clientId)
     }
 
     /// Parses a zoom region from tool arguments.
@@ -1052,11 +1018,6 @@ class ToolRouter: MCPSocketServerDelegate {
             "tabId": prop("number", "Tab ID")
         ]),
         tool("get_page_text", "Extract raw text content from the page.", [
-            "tabId": prop("number", "Tab ID")
-        ]),
-        tool("resize_window", "Resize the current browser window to specified dimensions.", [
-            "width": prop("number", "Target window width in pixels"),
-            "height": prop("number", "Target window height in pixels"),
             "tabId": prop("number", "Tab ID")
         ]),
         tool("read_console_messages", "Read browser console messages from a specific tab.", [
