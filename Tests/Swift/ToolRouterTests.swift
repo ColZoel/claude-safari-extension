@@ -504,8 +504,15 @@ final class ToolRouterTests: XCTestCase {
             }
         }
 
+        // Pre-store a fake bookmark so FileAccessManager considers /tmp/ accessible
+        // (avoids async NSOpenPanel dispatch in sandbox check)
+        let testDefaults = UserDefaults(suiteName: "test-fileupload-\(UUID())")!
+        let fam = FileAccessManager(defaults: testDefaults)
+        fam.storeBookmark(Data([0x01]), for: "/tmp")
+
         let mock = MockMCPSocketServer()
-        router = ToolRouter(screenshotService: ScreenshotService(), gifService: GifService(), fileService: MockFileService())
+        router = ToolRouter(screenshotService: ScreenshotService(), gifService: GifService(),
+                            fileService: MockFileService(), fileAccessManager: fam)
         router.setServer(mock)
 
         let data = try! JSONSerialization.data(withJSONObject: [

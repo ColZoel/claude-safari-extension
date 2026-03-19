@@ -17,6 +17,7 @@ class ToolRouter: MCPSocketServerDelegate {
     private let screenshotService: ScreenshotService
     private let gifService: GifService
     private let fileService: FileService
+    private let fileAccessManager: FileAccessManager
     private let notificationCenter: NotificationCenterProtocol
 
     // Production init — all services created fresh
@@ -30,10 +31,12 @@ class ToolRouter: MCPSocketServerDelegate {
 
     // Testable init — inject mock services and notification center for unit tests
     init(screenshotService: ScreenshotService, gifService: GifService, fileService: FileService,
+         fileAccessManager: FileAccessManager = FileAccessManager(),
          notificationCenter: NotificationCenterProtocol = UNUserNotificationCenter.current()) {
         self.screenshotService = screenshotService
         self.gifService = gifService
         self.fileService = fileService
+        self.fileAccessManager = fileAccessManager
         self.notificationCenter = notificationCenter
     }
 
@@ -726,6 +729,41 @@ class ToolRouter: MCPSocketServerDelegate {
         guard let ref = arguments["ref"] as? String, !ref.isEmpty else {
             sendError(id: id, code: -32000, message: "ref parameter is required", to: clientId)
             return
+        }
+
+        // Sandbox access: check if any paths need user-granted access via NSOpenPanel
+        let needsPrompt = paths.contains { fileAccessManager.needsAccessPrompt(for: $0) }
+        if needsPrompt {
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self else { return }
+                // Request access for the first path that needs it (the directory grant covers siblings)
+                let firstPath = paths.first(where: { self.fileAccessManager.needsAccessPrompt(for: $0) }) ?? paths[0]
+                guard self.fileAccessManager.requestAccess(for: firstPath) else {
+                    self.sendError(id: id, code: -32000,
+                                   message: "File access denied — user cancelled the folder access prompt",
+                                   to: clientId)
+                    return
+                }
+                self.readAndForwardFiles(paths: paths, arguments: arguments, id: id, clientId: clientId)
+            }
+        } else {
+            readAndForwardFiles(paths: paths, arguments: arguments, id: id, clientId: clientId)
+        }
+    }
+
+    /// Read files with security-scoped bookmark resolution and forward to extension.
+    private func readAndForwardFiles(paths: [String], arguments: [String: Any], id: Any?, clientId: String) {
+        // Resolve security-scoped access for sandboxed file reads
+        var resolvedURLs: [URL] = []
+        for path in paths {
+            if let url = fileAccessManager.resolveAccess(for: path) {
+                resolvedURLs.append(url)
+            }
+        }
+        defer {
+            for url in resolvedURLs {
+                fileAccessManager.stopAccess(for: url)
+            }
         }
 
         switch fileService.readFiles(paths: paths) {

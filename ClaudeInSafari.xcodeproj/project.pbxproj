@@ -37,6 +37,8 @@
 		E9ED48328A1F0387B9334B12 /* ClaudeInSafari Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A2BCAFC762E47A469BC702E3 /* ClaudeInSafari Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F8A556A293BA284872539B1F /* AppleScriptBridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C6819CDC28A43E78498350F /* AppleScriptBridgeTests.swift */; };
 		FA97D65DA63E1D2123E0014F /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96906F7FF10A8AF6F6E0CB2B /* MenuBarController.swift */; };
+		F0A1B2C3D4E5F6A7B8C9D0E1 /* FileAccessManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F8A9B0C1D2 /* FileAccessManager.swift */; };
+		F0A1B2C3D4E5F6A7B8C9D0E2 /* FileAccessManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F8A9B0C1D3 /* FileAccessManagerTests.swift */; };
 		FC4CA75768D2C5FD6249AE6B /* GifService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C53DE74FE809B179A899A57B /* GifService.swift */; };
 		FD8B1A2E3C4D5E6F7A8B9C0D /* ToolModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE9C0B1D2E3F4A5B6C7D8E9F /* ToolModelsTests.swift */; };
 		FF56AA2D0EFD16F29AFA30CD /* PermissionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C6A1743F9A8F1A1B1BBFDE4 /* PermissionMonitor.swift */; };
@@ -108,6 +110,8 @@
 		C557C15A842E784429478650 /* FileServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileServiceTests.swift; sourceTree = "<group>"; };
 		CCED58EC2A9B5A6E2523B951 /* PermissionMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionMonitorTests.swift; sourceTree = "<group>"; };
 		DCF900FB4B4265BA727FFA21 /* ToolModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolModels.swift; sourceTree = "<group>"; };
+		E1F2A3B4C5D6E7F8A9B0C1D2 /* FileAccessManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileAccessManager.swift; sourceTree = "<group>"; };
+		E1F2A3B4C5D6E7F8A9B0C1D3 /* FileAccessManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileAccessManagerTests.swift; sourceTree = "<group>"; };
 		EAD6A30A647A7F4F5DC5DEA3 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		EFD3A85665B31B76E55FCDE6 /* ToolRouterNotificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolRouterNotificationTests.swift; sourceTree = "<group>"; };
 		AE9C0B1D2E3F4A5B6C7D8E9F /* ToolModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolModelsTests.swift; sourceTree = "<group>"; };
@@ -149,6 +153,7 @@
 			isa = PBXGroup;
 			children = (
 				02B361326E8F2C467CF43011 /* AppleScriptBridge.swift */,
+				E1F2A3B4C5D6E7F8A9B0C1D2 /* FileAccessManager.swift */,
 				658074861C8C0C7933646343 /* FileService.swift */,
 				C53DE74FE809B179A899A57B /* GifService.swift */,
 				5736A5C7E56CF23B6FF9B13A /* ScreenshotService.swift */,
@@ -200,6 +205,7 @@
 			children = (
 				02AD4E6F8C9D0E1F2A3B4C5D /* AppDelegateTests.swift */,
 				9C6819CDC28A43E78498350F /* AppleScriptBridgeTests.swift */,
+				E1F2A3B4C5D6E7F8A9B0C1D3 /* FileAccessManagerTests.swift */,
 				C557C15A842E784429478650 /* FileServiceTests.swift */,
 				07542CB361F8FE6B0E4A5558 /* GifServiceTests.swift */,
 				F7A729444DE88ABCACE1FBD2 /* MCPMessageTests.swift */,
@@ -382,6 +388,7 @@
 				F8A556A293BA284872539B1F /* AppleScriptBridgeTests.swift in Sources */,
 				01AD3E5F7B8C9D0E1F2A3B4C /* AppDelegateTests.swift in Sources */,
 				3E3A0B200C0A287DA885E7A5 /* Constants.swift in Sources */,
+				F0A1B2C3D4E5F6A7B8C9D0E2 /* FileAccessManagerTests.swift in Sources */,
 				50788C66B072DEF05E5A9A64 /* FileServiceTests.swift in Sources */,
 				257435801FBA70A001BC58B6 /* GifServiceTests.swift in Sources */,
 				2E19B15D715BBC43C9DBFF32 /* MCPMessageTests.swift in Sources */,
@@ -405,6 +412,7 @@
 				B0B3DAD82B9C21C2DF890362 /* AppleScriptBridge.swift in Sources */,
 				A1B2C3D4E5F60718293A4B5C /* BrandColors.swift in Sources */,
 				921D7ABA46275FD600060ED6 /* Constants.swift in Sources */,
+				F0A1B2C3D4E5F6A7B8C9D0E1 /* FileAccessManager.swift in Sources */,
 				30EB2D0811612DBB6A50EF32 /* FileService.swift in Sources */,
 				FC4CA75768D2C5FD6249AE6B /* GifService.swift in Sources */,
 				9A6E898572D7D10C996C83CC /* MCPMessage.swift in Sources */,
