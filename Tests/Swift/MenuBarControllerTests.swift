@@ -30,13 +30,13 @@ final class MenuBarControllerTests: XCTestCase {
 
     // T4 — menuBarState(from:) returns .connected when allGranted
     func testMenuBarState_allGranted_isConnected() {
-        let status = PermissionStatus(extensionEnabled: true, screenRecording: true, accessibility: true)
+        let status = PermissionStatus(extensionEnabled: true, screenRecording: true)
         XCTAssertEqual(MenuBarController.menuBarState(from: status), .connected)
     }
 
     // T5 — menuBarState(from:) returns .needsAttention when screen recording revoked
     func testMenuBarState_screenRecordingRevoked_isNeedsAttention() {
-        let status = PermissionStatus(extensionEnabled: true, screenRecording: false, accessibility: true)
+        let status = PermissionStatus(extensionEnabled: true, screenRecording: false)
         if case .needsAttention(let msg) = MenuBarController.menuBarState(from: status) {
             XCTAssertTrue(msg.contains("Screen Recording"), "Expected Screen Recording in message, got: \(msg)")
         } else {
@@ -46,7 +46,7 @@ final class MenuBarControllerTests: XCTestCase {
 
     // T6 — menuBarState(from:) returns .notConnected when extension not enabled
     func testMenuBarState_extensionNotEnabled_isNotConnected() {
-        let status = PermissionStatus(extensionEnabled: false, screenRecording: true, accessibility: true)
+        let status = PermissionStatus(extensionEnabled: false, screenRecording: true)
         XCTAssertEqual(MenuBarController.menuBarState(from: status), .notConnected)
     }
 }

@@ -57,9 +57,6 @@ final class MenuBarController {
         if !status.screenRecording {
             return .needsAttention("Screen Recording permission was removed")
         }
-        if !status.accessibility {
-            return .needsAttention("Accessibility permission was removed")
-        }
         return .connected
     }
 

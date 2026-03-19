@@ -105,11 +105,6 @@ final class OnboardingWindowController: NSWindowController {
                 // No dialog on macOS 14+. Must happen before user navigates to System Settings.
                 monitor.registerScreenRecording()
             }
-            if step == .accessibility {
-                // Silently register in TCC so the app appears in Accessibility list.
-                // No dialog — the prompt-dialog is deferred to the button tap handler.
-                monitor.registerAccessibility()
-            }
             startPolling(for: step)
         }
     }
@@ -121,8 +116,6 @@ final class OnboardingWindowController: NSWindowController {
         case .step(.safariExtension):
             show(screen: .step(.screenRecording))
         case .step(.screenRecording):
-            show(screen: .step(.accessibility))
-        case .step(.accessibility):
             show(screen: .done)
         case .done:
             dismiss()
@@ -175,8 +168,6 @@ final class OnboardingWindowController: NSWindowController {
             case .safariExtension:  break   // permission not yet granted; keep polling
             case .screenRecording where status.screenRecording:  self.advance()
             case .screenRecording:  break   // permission not yet granted; keep polling
-            case .accessibility   where status.accessibility:    self.advance()
-            case .accessibility:    break   // permission not yet granted; keep polling
             }
         }
     }
@@ -188,7 +179,6 @@ final class OnboardingWindowController: NSWindowController {
         case .welcome:              return buildWelcomeView()
         case .step(.safariExtension): return buildSafariExtensionView()
         case .step(.screenRecording): return buildScreenRecordingView()
-        case .step(.accessibility):   return buildAccessibilityView()
         case .done:                 return buildDoneView()
         }
     }
@@ -382,56 +372,6 @@ final class OnboardingWindowController: NSWindowController {
             }
         } else {
             NSLog("OnboardingWindowController: malformed URL literal for Screen Recording preferences")
-        }
-    }
-
-    // MARK: Accessibility Step
-
-    private func buildAccessibilityView() -> NSView {
-        let root = paddedRoot()
-
-        let iconView = makeIconView(size: Layout.iconSizeSm, corner: Layout.cornerSm, content: accessibilityIconImage(size: Layout.iconSizeSm * 0.55))
-        iconView.frame.origin = CGPoint(x: Layout.padding, y: Layout.windowHeight - Layout.padding - Layout.iconSizeSm)
-        root.addSubview(iconView)
-
-        let title = makeLabel("Allow Accessibility Access", size: 20, weight: .bold)
-        title.frame = NSRect(x: Layout.padding, y: iconView.frame.minY - 36, width: Layout.windowWidth - Layout.padding * 2, height: 26)
-        root.addSubview(title)
-
-        let body = makeLabel("This lets Claude Code resize and position Safari's window — so it has enough room to work effectively. Used only for window management, nothing else.", size: 13, weight: .regular, color: .secondaryLabelColor, wraps: true)
-        body.frame = NSRect(x: Layout.padding, y: title.frame.minY - 54, width: Layout.windowWidth - Layout.padding * 2, height: 48)
-        root.addSubview(body)
-
-        let instructionBox = makeInstructionBox("Open System Settings → Privacy & Security → Accessibility and enable Claude in Safari")
-        instructionBox.frame = NSRect(x: Layout.padding, y: body.frame.minY - 68, width: Layout.windowWidth - Layout.padding * 2, height: 56)
-        root.addSubview(instructionBox)
-
-        let detecting = makeDetectingRow("Watching for permission to be granted…")
-        detecting.frame = NSRect(x: Layout.padding, y: instructionBox.frame.minY - 44, width: Layout.windowWidth - Layout.padding * 2, height: 32)
-        root.addSubview(detecting)
-
-        let primary = makeButton("Open System Settings", action: #selector(openAccessibilitySettings), primary: true)
-        primary.frame = NSRect(x: Layout.padding, y: 60, width: Layout.windowWidth - Layout.padding * 2, height: 36)
-        root.addSubview(primary)
-
-        let fallback = makeButton("I already did this →", action: #selector(manualAdvance), primary: false)
-        fallback.frame = NSRect(x: Layout.padding, y: 30, width: Layout.windowWidth - Layout.padding * 2, height: 24)
-        root.addSubview(fallback)
-
-        addTimeline(to: root, activeIndex: 2)
-        return root
-    }
-
-    @objc private func openAccessibilitySettings() {
-        // Show the system TCC dialog (which also re-registers in TCC) and open
-        // System Settings. The dialog only fires on button tap, not step entry.
-        monitor.requestAccessibility()
-        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-            if !NSWorkspace.shared.open(url) {
-                NSLog("OnboardingWindowController: failed to open Accessibility system preferences URL")
-            }
-        } else {
-            NSLog("OnboardingWindowController: malformed URL literal for Accessibility preferences")
         }
     }
 
@@ -660,15 +600,15 @@ final class OnboardingWindowController: NSWindowController {
         return row
     }
 
-    /// Adds the 3-segment timeline strip at the bottom of a step view.
-    /// `activeIndex`: 0 = Safari Extension, 1 = Screen Recording, 2 = Accessibility
+    /// Adds the 2-segment timeline strip at the bottom of a step view.
+    /// `activeIndex`: 0 = Safari Extension, 1 = Screen Recording
     private func addTimeline(to root: NSView, activeIndex: Int) {
-        let labels = ["Safari Extension", "Screen Recording", "Accessibility"]
-        let segWidth = (Layout.windowWidth - Layout.padding * 2 - 10) / 3
+        let labels = ["Safari Extension", "Screen Recording"]
+        let segWidth = (Layout.windowWidth - Layout.padding * 2 - 5) / 2
         let barY: CGFloat = 14
         let labelY: CGFloat = 2
 
-        for i in 0..<3 {
+        for i in 0..<2 {
             let x = Layout.padding + CGFloat(i) * (segWidth + 5)
 
             // Bar
@@ -732,10 +672,6 @@ final class OnboardingWindowController: NSWindowController {
 
     private func cameraIconImage(size: CGFloat) -> NSImage {
         sfSymbolImage("camera.fill", size: size)
-    }
-
-    private func accessibilityIconImage(size: CGFloat) -> NSImage {
-        sfSymbolImage("accessibility", size: size)
     }
 
     private func checkmarkIconImage(size: CGFloat) -> NSImage {
