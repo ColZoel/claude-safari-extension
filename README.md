@@ -7,8 +7,8 @@ A macOS Safari Web Extension that brings the [Claude in Chrome](https://claude.a
 ```
 Claude Code CLI
     ↕  Unix domain socket  (newline-delimited JSON)
-    ↕  /tmp/claude-mcp-browser-bridge-<username>/<pid>.sock
-Native Swift App  (MCP server · screenshots · window management · file I/O)
+    ↕  <AppGroupContainer>/sockets/<pid>.sock
+Native Swift App  (MCP server · screenshots · file I/O)
     ↕  browser.runtime.sendNativeMessage()
 Safari Web Extension  (background script · content scripts · tool handlers)
     ↕  browser.scripting.executeScript
@@ -49,10 +49,9 @@ make test-swift
 ## Setup
 
 1. Run `make dev` — builds the app, launches it, and creates a stable socket symlink.
-2. The onboarding wizard guides you through three permissions:
+2. The onboarding wizard guides you through two permissions:
    - **Safari extension** — enable in Safari → Settings → Extensions
    - **Screen Recording** — for screenshots (ScreenCaptureKit)
-   - **Accessibility** — for window resize (AppleScript)
 3. The menu bar icon shows connection status (green = connected, yellow = needs attention).
 
 The MCP socket server starts automatically on launch.
@@ -101,7 +100,7 @@ This project follows the principles in [PRINCIPLES.md](PRINCIPLES.md):
 | `read_console_messages` | Captured console logs |
 | `read_network_requests` | Captured network log |
 | `computer` | Mouse, keyboard, scroll, screenshot (ScreenCaptureKit) |
-| `resize_window` | AppleScript window management |
+| `resize_window` | *(disabled — Spec 026, App Store compatibility)* |
 | `tabs_context_mcp` / `tabs_create_mcp` | Tab listing and creation |
 | `gif_creator` | Screen recording to GIF |
 | `upload_image` | Inject image into page |
@@ -116,7 +115,7 @@ This project follows the principles in [PRINCIPLES.md](PRINCIPLES.md):
 | Native ↔ extension bridge | `browser.runtime.sendNativeMessage()` message routing |
 | Tool registry | Centralized tool registration and dispatch |
 | Tabs manager | Virtual tab groups via `browser.storage.session` |
-| Onboarding wizard | First-run setup for Safari extension, Screen Recording, and Accessibility permissions |
+| Onboarding wizard | First-run setup for Safari extension and Screen Recording permissions |
 | Menu bar presence | Status icon with connection state and permission monitoring |
 | macOS notifications | Native Notification Center integration for agent activity |
 
