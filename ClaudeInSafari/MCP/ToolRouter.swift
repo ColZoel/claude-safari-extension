@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import UserNotifications
 
@@ -201,6 +202,59 @@ class ToolRouter: MCPSocketServerDelegate {
         for requestId in toCancel {
             failPendingRequest(requestId: requestId, message: "Cancelled by user")
         }
+    }
+
+    /// Set of tool names that use browser.tabs.executeScript and require Safari frontmost.
+    /// Must include every tool whose extension handler calls executeScript via
+    /// executeScriptWithTabGuard. Update when adding new executeScript-based tools.
+    /// Guarded by `testExecuteScriptToolsContainsAllExecuteScriptBasedTools` in ToolRouterTests.
+    private static let executeScriptTools: Set<String> = [
+        "computer", "find", "read_page", "form_input", "get_page_text",
+        "javascript_tool", "read_console_messages", "read_network_requests",
+        "upload_image", "file_upload"
+    ]
+
+    /// Test-only accessor for executeScriptTools. Internal for @testable access.
+    static var executeScriptToolsForTesting: Set<String> { executeScriptTools }
+
+    /// Activate Safari if it is not already the frontmost application.
+    /// Best-effort: logs warnings on failure but does not throw — the subsequent
+    /// executeScript call will surface a specific permission error if Safari is
+    /// not frontmost. Polls briefly after activation to let the window server
+    /// bring Safari to the foreground before the tool request is forwarded.
+    ///
+    /// Note: computer/screenshot and computer/zoom are handled natively before
+    /// forwardToExtension. computer/wait is excluded at the call site (uses
+    /// setTimeout/alarms, not executeScript). Activation fires only for actions
+    /// that actually call executeScript.
+    func activateSafariIfNeeded() {
+        guard let safari = NSWorkspace.shared.runningApplications.first(where: {
+            $0.bundleIdentifier == "com.apple.Safari"
+        }) else {
+            NSLog("activateSafariIfNeeded: Safari is not running — tool will likely fail")
+            return
+        }
+        if safari.isActive { return }
+
+        var activated: Bool
+        if #available(macOS 14.0, *) {
+            activated = safari.activate()
+        } else {
+            activated = safari.activate(options: .activateIgnoringOtherApps)
+        }
+
+        if !activated {
+            NSLog("activateSafariIfNeeded: activate() returned false — tool may fail with permission error")
+            return
+        }
+
+        // Poll briefly for activation to take effect (window server is async).
+        // Called on the GCD delegate queue — sequential MCP tool requests make this safe.
+        for _ in 0..<10 {
+            if safari.isActive { return }
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+        NSLog("activateSafariIfNeeded: Safari did not become active within 500ms — tool may fail with permission error")
     }
 
     // MARK: - MCPSocketServerDelegate
@@ -714,6 +768,12 @@ class ToolRouter: MCPSocketServerDelegate {
 
     private func forwardToExtension(_ queued: QueuedToolRequest, id: Any?, clientId: String,
                                      arguments: [String: Any] = [:]) {
+        // computer/wait uses setTimeout/alarms, not executeScript — skip activation
+        let isWait = queued.tool == "computer" && (arguments["action"] as? String) == "wait"
+        if !isWait && Self.executeScriptTools.contains(queued.tool) {
+            activateSafariIfNeeded()
+        }
+
         guard enqueueToolRequest(queued) else {
             sendError(id: id, code: -32000, message: "Failed to enqueue tool request", to: clientId)
             return

@@ -21,13 +21,14 @@
  * Dependencies:
  *   globalThis.resolveTab                — tabs-manager.js
  *   globalThis.classifyExecuteScriptError — tool-registry.js
+ *   globalThis.executeScriptWithTabGuard  — tool-registry.js
  *   globalThis.registerTool              — tool-registry.js
  *
  * ⚠ Safari must be frontmost for all actions except wait.
- *   ToolRouter.swift must activate Safari before forwarding any computer action.
+ *   ToolRouter.swift activates Safari before forwarding any computer action.
  *
- * ⚠ wait > 20s uses browser.alarms to survive background page suspension
- *   (persistent: false + 24s keepalive alarm leave a gap for long waits).
+ * ⚠ wait > 20s uses browser.alarms for forward compatibility with non-persistent mode
+ *   (persistent: true eliminates suspension risk, but alarms are kept as a safety net).
  *
  * See Spec 010 (computer-mouse-keyboard).
  */
@@ -77,6 +78,31 @@ async function handleComputer(args) {
 
     if (action === "wait") {
         return handler(args);
+    }
+
+    // Upfront validation — reject bad payloads before resolveTab or executeScript.
+    // Per-handler checks remain as a safety net.
+    // Click/hover coordinate-or-ref validation stays in handlers (already rejects
+    // before executeScript via validateCoordinateOrRef).
+    if (action === "type" || action === "key") {
+        if (!args.text || typeof args.text !== "string") {
+            throw new Error("text parameter is required for " + action + " action");
+        }
+    } else if (action === "scroll") {
+        if (!args.scroll_direction) {
+            throw new Error("scroll_direction is required for scroll action");
+        }
+    } else if (action === "scroll_to") {
+        if (!args.ref || typeof args.ref !== "string") {
+            throw new Error("ref is required for scroll_to action");
+        }
+    } else if (action === "left_click_drag") {
+        if (!args.start_coordinate) {
+            throw new Error("start_coordinate is required for left_click_drag");
+        }
+        if (!args.coordinate) {
+            throw new Error("coordinate is required for left_click_drag");
+        }
     }
 
     const realTabId = await globalThis.resolveTab(virtualTabId);
@@ -407,11 +433,11 @@ async function handleClick(args, realTabId) {
 
     let results;
     try {
-        results = await browser.tabs.executeScript(realTabId, {
-            code: buildClickScript(action, coordinate, ref, modifiers),
-            runAt: "document_idle",
-        });
+        results = await globalThis.executeScriptWithTabGuard(
+            realTabId, buildClickScript(action, coordinate, ref, modifiers), "computer"
+        );
     } catch (err) {
+        if (/was closed during|executeScript timed out|executeScript cancelled/.test(err.message)) throw err;
         throw globalThis.classifyExecuteScriptError("computer", realTabId, err);
     }
 
@@ -431,11 +457,11 @@ async function handleHover(args, realTabId) {
 
     let results;
     try {
-        results = await browser.tabs.executeScript(realTabId, {
-            code: buildHoverScript(coordinate, ref),
-            runAt: "document_idle",
-        });
+        results = await globalThis.executeScriptWithTabGuard(
+            realTabId, buildHoverScript(coordinate, ref), "computer"
+        );
     } catch (err) {
+        if (/was closed during|executeScript timed out|executeScript cancelled/.test(err.message)) throw err;
         throw globalThis.classifyExecuteScriptError("computer", realTabId, err);
     }
 
@@ -457,11 +483,11 @@ async function handleType(args, realTabId) {
 
     let results;
     try {
-        results = await browser.tabs.executeScript(realTabId, {
-            code: buildTypeScript(text),
-            runAt: "document_idle",
-        });
+        results = await globalThis.executeScriptWithTabGuard(
+            realTabId, buildTypeScript(text), "computer"
+        );
     } catch (err) {
+        if (/was closed during|executeScript timed out|executeScript cancelled/.test(err.message)) throw err;
         throw globalThis.classifyExecuteScriptError("computer", realTabId, err);
     }
 
@@ -485,11 +511,11 @@ async function handleKey(args, realTabId) {
 
     let results;
     try {
-        results = await browser.tabs.executeScript(realTabId, {
-            code: buildKeyScript(text, repeatNum),
-            runAt: "document_idle",
-        });
+        results = await globalThis.executeScriptWithTabGuard(
+            realTabId, buildKeyScript(text, repeatNum), "computer"
+        );
     } catch (err) {
+        if (/was closed during|executeScript timed out|executeScript cancelled/.test(err.message)) throw err;
         throw globalThis.classifyExecuteScriptError("computer", realTabId, err);
     }
 
@@ -632,11 +658,11 @@ async function handleScroll(args, realTabId) {
 
     let results;
     try {
-        results = await browser.tabs.executeScript(realTabId, {
-            code: buildScrollScript(coordinate, scroll_direction, scrollAmount),
-            runAt: "document_idle",
-        });
+        results = await globalThis.executeScriptWithTabGuard(
+            realTabId, buildScrollScript(coordinate, scroll_direction, scrollAmount), "computer"
+        );
     } catch (err) {
+        if (/was closed during|executeScript timed out|executeScript cancelled/.test(err.message)) throw err;
         throw globalThis.classifyExecuteScriptError("computer", realTabId, err);
     }
 
@@ -657,11 +683,11 @@ async function handleScrollTo(args, realTabId) {
 
     let results;
     try {
-        results = await browser.tabs.executeScript(realTabId, {
-            code: buildScrollToScript(ref),
-            runAt: "document_idle",
-        });
+        results = await globalThis.executeScriptWithTabGuard(
+            realTabId, buildScrollToScript(ref), "computer"
+        );
     } catch (err) {
+        if (/was closed during|executeScript timed out|executeScript cancelled/.test(err.message)) throw err;
         throw globalThis.classifyExecuteScriptError("computer", realTabId, err);
     }
 
@@ -684,11 +710,11 @@ async function handleDrag(args, realTabId) {
 
     let results;
     try {
-        results = await browser.tabs.executeScript(realTabId, {
-            code: buildDragScript(start_coordinate, coordinate),
-            runAt: "document_idle",
-        });
+        results = await globalThis.executeScriptWithTabGuard(
+            realTabId, buildDragScript(start_coordinate, coordinate), "computer"
+        );
     } catch (err) {
+        if (/was closed during|executeScript timed out|executeScript cancelled/.test(err.message)) throw err;
         throw globalThis.classifyExecuteScriptError("computer", realTabId, err);
     }
 

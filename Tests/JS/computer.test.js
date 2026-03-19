@@ -58,6 +58,10 @@ function makeBrowserMockWithDomEval() {
                 };
                 return [vm.runInNewContext(code, sandbox)];
             }),
+            onRemoved: {
+                addListener: jest.fn(),
+                removeListener: jest.fn(),
+            },
         },
         alarms: {
             create: jest.fn(),
@@ -87,6 +91,10 @@ function makeBrowserMock(opts = {}) {
                 if (scriptError) throw scriptError;
                 return scriptResult;
             }),
+            onRemoved: {
+                addListener: jest.fn(),
+                removeListener: jest.fn(),
+            },
         },
         alarms: {
             create: jest.fn(),
@@ -799,10 +807,167 @@ describe("computer tool", () => {
         });
     });
 
+    describe("upfront payload validation", () => {
+        test("type with non-string text rejects before resolveTab", async () => {
+            const resolveTab = jest.fn(async () => 42);
+            const handler = loadComputer({ browser: makeBrowserMock(), resolveTab });
+
+            await expect(handler({ action: "type", text: 123 })).rejects.toThrow(/text.*required/);
+            expect(resolveTab).not.toHaveBeenCalled();
+        });
+
+        test("type with empty string text rejects before resolveTab", async () => {
+            const resolveTab = jest.fn(async () => 42);
+            const handler = loadComputer({ browser: makeBrowserMock(), resolveTab });
+
+            await expect(handler({ action: "type", text: "" })).rejects.toThrow(/text.*required/);
+            expect(resolveTab).not.toHaveBeenCalled();
+        });
+
+        test("key with missing text rejects before resolveTab", async () => {
+            const resolveTab = jest.fn(async () => 42);
+            const handler = loadComputer({ browser: makeBrowserMock(), resolveTab });
+
+            await expect(handler({ action: "key" })).rejects.toThrow(/text.*required/);
+            expect(resolveTab).not.toHaveBeenCalled();
+        });
+
+        test("scroll with missing scroll_direction rejects before resolveTab", async () => {
+            const resolveTab = jest.fn(async () => 42);
+            const handler = loadComputer({ browser: makeBrowserMock(), resolveTab });
+
+            await expect(handler({ action: "scroll" })).rejects.toThrow(/scroll_direction.*required/);
+            expect(resolveTab).not.toHaveBeenCalled();
+        });
+
+        test("scroll_to with missing ref rejects before resolveTab", async () => {
+            const resolveTab = jest.fn(async () => 42);
+            const handler = loadComputer({ browser: makeBrowserMock(), resolveTab });
+
+            await expect(handler({ action: "scroll_to" })).rejects.toThrow(/ref.*required/);
+            expect(resolveTab).not.toHaveBeenCalled();
+        });
+
+        test("left_click_drag with missing start_coordinate rejects before resolveTab", async () => {
+            const resolveTab = jest.fn(async () => 42);
+            const handler = loadComputer({ browser: makeBrowserMock(), resolveTab });
+
+            await expect(
+                handler({ action: "left_click_drag", coordinate: [300, 300] })
+            ).rejects.toThrow(/start_coordinate.*required/);
+            expect(resolveTab).not.toHaveBeenCalled();
+        });
+
+        test("left_click_drag with missing coordinate rejects before resolveTab", async () => {
+            const resolveTab = jest.fn(async () => 42);
+            const handler = loadComputer({ browser: makeBrowserMock(), resolveTab });
+
+            await expect(
+                handler({ action: "left_click_drag", start_coordinate: [100, 100] })
+            ).rejects.toThrow(/coordinate.*required/);
+            expect(resolveTab).not.toHaveBeenCalled();
+        });
+    });
+
     describe("registration", () => {
         test("registers itself under the name 'computer'", () => {
             loadComputer({ browser: makeBrowserMock(), resolveTab: jest.fn(async () => 42) });
             expect(globalThis.registerTool).toHaveBeenCalledWith("computer", expect.any(Function));
+        });
+    });
+
+    describe("tab-closed guards", () => {
+        test("left_click rejects with tab-closed error when tab is removed mid-flight", async () => {
+            let onRemovedListener = null;
+            const browser = {
+                tabs: {
+                    executeScript: jest.fn(() => new Promise(() => {})), // never resolves
+                    onRemoved: {
+                        addListener: jest.fn((fn) => { onRemovedListener = fn; }),
+                        removeListener: jest.fn(),
+                    },
+                },
+                alarms: {
+                    create: jest.fn(), clear: jest.fn(),
+                    get: jest.fn(() => Promise.resolve(undefined)),
+                    onAlarm: { addListener: jest.fn(), removeListener: jest.fn() },
+                },
+                storage: { session: {
+                    get: jest.fn(() => Promise.resolve({})),
+                    set: jest.fn(() => Promise.resolve()),
+                    remove: jest.fn(() => Promise.resolve()),
+                }},
+            };
+
+            const handler = loadComputer({ browser, resolveTab: jest.fn(async () => 42) });
+            const promise = handler({ action: "left_click", coordinate: [100, 200] });
+
+            // One microtask tick for resolveTab (async), then addListener is synchronous
+            // inside the Promise executor of executeScriptWithTabGuard.
+            await Promise.resolve();
+            onRemovedListener(42); // fire tab removed
+
+            await expect(promise).rejects.toThrow(/was closed during computer/);
+        });
+
+        test("type rejects with tab-closed error when tab is removed mid-flight", async () => {
+            let onRemovedListener = null;
+            const browser = {
+                tabs: {
+                    executeScript: jest.fn(() => new Promise(() => {})),
+                    onRemoved: {
+                        addListener: jest.fn((fn) => { onRemovedListener = fn; }),
+                        removeListener: jest.fn(),
+                    },
+                },
+                alarms: {
+                    create: jest.fn(), clear: jest.fn(),
+                    get: jest.fn(() => Promise.resolve(undefined)),
+                    onAlarm: { addListener: jest.fn(), removeListener: jest.fn() },
+                },
+                storage: { session: {
+                    get: jest.fn(() => Promise.resolve({})),
+                    set: jest.fn(() => Promise.resolve()),
+                    remove: jest.fn(() => Promise.resolve()),
+                }},
+            };
+
+            const handler = loadComputer({ browser, resolveTab: jest.fn(async () => 42) });
+            const promise = handler({ action: "type", text: "hello" });
+
+            // One microtask tick for resolveTab
+            await Promise.resolve();
+            onRemovedListener(42);
+
+            await expect(promise).rejects.toThrow(/was closed during computer/);
+        });
+
+        test("non-tab-closed executeScript errors still use classifyExecuteScriptError", async () => {
+            const browser = {
+                tabs: {
+                    executeScript: jest.fn(() => Promise.reject(new Error("No tab with id 99"))),
+                    onRemoved: {
+                        addListener: jest.fn(),
+                        removeListener: jest.fn(),
+                    },
+                },
+                alarms: {
+                    create: jest.fn(), clear: jest.fn(),
+                    get: jest.fn(() => Promise.resolve(undefined)),
+                    onAlarm: { addListener: jest.fn(), removeListener: jest.fn() },
+                },
+                storage: { session: {
+                    get: jest.fn(() => Promise.resolve({})),
+                    set: jest.fn(() => Promise.resolve()),
+                    remove: jest.fn(() => Promise.resolve()),
+                }},
+            };
+
+            const handler = loadComputer({ browser, resolveTab: jest.fn(async () => 99) });
+
+            await expect(
+                handler({ action: "left_click", coordinate: [100, 200] })
+            ).rejects.toThrow(/tabs_context_mcp/);
         });
     });
 });
