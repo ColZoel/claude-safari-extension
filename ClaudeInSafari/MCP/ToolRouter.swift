@@ -363,8 +363,6 @@ class ToolRouter: MCPSocketServerDelegate {
             handleUploadImage(arguments: arguments, id: id, clientId: clientId)
         } else if toolName == "file_upload" {
             handleFileUpload(arguments: arguments, id: id, clientId: clientId)
-        } else if toolName == "resize_window" {
-            handleResizeWindow(arguments: arguments, id: id, clientId: clientId)
         } else if nativeTools.contains(toolName) {
             sendError(id: id, code: -32000, message: "Native tool '\(toolName)' not yet implemented", to: clientId)
         } else {
@@ -597,14 +595,6 @@ class ToolRouter: MCPSocketServerDelegate {
         }
     }
 
-    // MARK: - Native Window Resize
-
-    /// Disabled for App Store compatibility (Spec 026). AppleScriptBridge is preserved
-    /// in the codebase for future re-enablement via browser.windows.update() or similar.
-    private func handleResizeWindow(arguments: [String: Any], id: Any?, clientId: String) {
-        sendError(id: id, code: -32000, message: "resize_window is temporarily disabled (App Store compatibility)", to: clientId)
-    }
-
     /// Parses a zoom region from tool arguments.
     /// Expects `region` key containing a 4-element array of integers [x, y, width, height].
     /// Tolerates JSON numbers arriving as Double or NSNumber (common via native bridge).
@@ -624,24 +614,6 @@ class ToolRouter: MCPSocketServerDelegate {
             if converted.count == 4 { return (converted[0], converted[1], converted[2], converted[3]) }
         }
         return nil
-    }
-
-    /// Parse width and height from tool arguments, tolerating Int, Double, or NSNumber.
-    /// Returns nil if either argument is missing or cannot be converted to a Double.
-    /// Separated from handleResizeWindow for testability.
-    func parseResizeDimensions(_ arguments: [String: Any]) -> (width: Double, height: Double)? {
-        // Tolerate Int, Double, or NSNumber — same pattern used for zoom region parsing.
-        func asDouble(_ val: Any) -> Double? {
-            if let i = val as? Int { return Double(i) }
-            if let d = val as? Double { return d }
-            if let n = val as? NSNumber { return n.doubleValue }
-            return nil
-        }
-        guard let wRaw = arguments["width"], let hRaw = arguments["height"],
-              let w = asDouble(wRaw), let h = asDouble(hRaw) else {
-            return nil
-        }
-        return (w, h)
     }
 
     /// Parse a coordinate value from tool arguments, tolerating Int, Double, or NSNumber.

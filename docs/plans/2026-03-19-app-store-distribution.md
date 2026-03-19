@@ -57,45 +57,10 @@
 - Keep: `ClaudeInSafari/Services/AppleScriptBridge.swift` (unchanged)
 - Keep: `Tests/Swift/AppleScriptBridgeTests.swift` (unchanged)
 
-- [ ] **Step 1: Disconnect resize_window from ToolRouter.swift**
-
-In `ToolRouter.swift`:
-1. Remove `"resize_window"` from `executeScriptTools` set (~line 206)
-2. Remove the `case "resize_window"` dispatch in `handleToolCall()` (~line 358)
-3. Comment out or remove the `handleResizeWindow()` method body (~lines 600-635), replacing with a "tool disabled" error response. Keep the method signature so the code documents what was there:
-```swift
-/// Disabled for App Store compatibility (Spec 026). AppleScriptBridge is preserved
-/// in the codebase for future re-enablement via browser.windows.update() or similar.
-private func handleResizeWindow(...) {
-    sendError("resize_window is temporarily disabled (App Store compatibility)")
-}
-```
-4. Remove the `resize_window` entry from `toolDefinitions` static array (~lines 1057-1061) so it is not advertised to clients
-5. Remove the `private let appleScriptBridge: AppleScriptBridge` property and its initialization in `init()` (the class remains in the project but is no longer instantiated)
-
-- [ ] **Step 2: Remove AppleScript entitlement and usage description**
-
-In `ClaudeInSafari/ClaudeInSafari.entitlements`, remove:
-```xml
-<key>com.apple.security.temporary-exception.apple-events</key>
-<array>
-    <string>com.apple.Safari</string>
-</array>
-```
-
-In `ClaudeInSafari/Info.plist`, remove the `NSAppleEventsUsageDescription` key and its string value.
-
-**Note:** `AppleScriptBridge.swift` and `AppleScriptBridgeTests.swift` stay in the project. The bridge class compiles fine without the entitlement — the entitlement is only needed at runtime. The tests test validation logic (dimensions, error classification) which doesn't require the entitlement.
-
-- [ ] **Step 3: Remove resize_window tests from ToolRouterTests.swift**
-
-In `Tests/Swift/ToolRouterTests.swift`, remove any test cases that reference `resize_window` or `handleResizeWindow` (these test the ToolRouter dispatch, not AppleScriptBridge itself).
-
-- [ ] **Step 4: Build and run tests**
-
-Run: `make build && make test-swift`
-Expected: Build succeeds. All Swift tests pass including AppleScriptBridge tests (they test validation, not runtime execution).
-
+- [x] **Step 1: Disconnect resize_window from ToolRouter.swift**
+- [x] **Step 2: Remove AppleScript entitlement and usage description** (already done in prior work)
+- [x] **Step 3: Remove resize_window tests from ToolRouterTests.swift**
+- [x] **Step 4: Build and run tests** — 269 tests, 0 failures
 - [ ] **Step 5: Commit**
 
 ```
