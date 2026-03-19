@@ -733,18 +733,20 @@ class ToolRouter: MCPSocketServerDelegate {
             return
         }
 
-        // Sandbox access: check if any paths need user-granted access via NSOpenPanel
+        // Sandbox access: prompt for each distinct directory that lacks a bookmark.
+        // A single directory grant covers all files within it, so we deduplicate by parent dir.
         let needsPrompt = paths.contains { fileAccessManager.needsAccessPrompt(for: $0) }
         if needsPrompt {
             DispatchQueue.main.async { [weak self] in
                 guard let self = self else { return }
-                // Request access for the first path that needs it (the directory grant covers siblings)
-                let firstPath = paths.first(where: { self.fileAccessManager.needsAccessPrompt(for: $0) }) ?? paths[0]
-                guard self.fileAccessManager.requestAccess(for: firstPath) else {
-                    self.sendError(id: id, code: -32000,
-                                   message: "File access denied — user cancelled the folder access prompt",
-                                   to: clientId)
-                    return
+                // Loop until all paths are covered — each grant may cover multiple files
+                while let ungrantedPath = paths.first(where: { self.fileAccessManager.needsAccessPrompt(for: $0) }) {
+                    guard self.fileAccessManager.requestAccess(for: ungrantedPath) else {
+                        self.sendError(id: id, code: -32000,
+                                       message: "File access denied — user cancelled the folder access prompt",
+                                       to: clientId)
+                        return
+                    }
                 }
                 self.readAndForwardFiles(paths: paths, arguments: arguments, id: id, clientId: clientId)
             }
