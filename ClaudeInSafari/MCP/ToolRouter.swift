@@ -737,8 +737,7 @@ class ToolRouter: MCPSocketServerDelegate {
         // A single directory grant covers all files within it, so we deduplicate by parent dir.
         let needsPrompt = paths.contains { fileAccessManager.needsAccessPrompt(for: $0) }
         if needsPrompt {
-            DispatchQueue.main.async { [weak self] in
-                guard let self = self else { return }
+            DispatchQueue.main.async { [self] in
                 // Loop until all paths are covered — each grant may cover multiple files
                 while let ungrantedPath = paths.first(where: { self.fileAccessManager.needsAccessPrompt(for: $0) }) {
                     guard self.fileAccessManager.requestAccess(for: ungrantedPath) else {
