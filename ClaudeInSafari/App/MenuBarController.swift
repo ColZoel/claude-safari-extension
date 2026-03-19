@@ -161,6 +161,10 @@ final class MenuBarController {
         menu.addItem(.separator())
         menu.addItem(makeItem("Check Connection", action: #selector(checkConnection), symbol: "🔍"))
 
+        menu.addItem(.separator())
+        menu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "")
+        menu.addItem(withTitle: "About \(AppConstants.appDisplayName)", action: #selector(showAbout), keyEquivalent: "")
+        menu.addItem(.separator())
         menu.addItem(makeItem("Quit", action: #selector(quitApp), symbol: nil))
 
         // Wire target
@@ -249,4 +253,20 @@ final class MenuBarController {
         }
     }
     @objc private func quitApp()         { NSApplication.shared.terminate(nil) }
+
+    @objc private func checkForUpdates() {
+        NSWorkspace.shared.open(AppConstants.updateURL)
+    }
+
+    @objc private func showAbout() {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""
+
+        let alert = NSAlert()
+        alert.messageText = AppConstants.appDisplayName
+        alert.informativeText = "Version \(version) (\(build))\n\nA Safari extension that enables Claude Code CLI to control Safari via MCP."
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
 }
