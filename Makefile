@@ -46,7 +46,7 @@ APP_PATH     = $(BUILD_DIR)/$(APP_NAME).app
 # ---------------------------------------------------------------------------
 
 .PHONY: dev build run kill test test-swift test-all send list-tools status clean help \
-        health doctor queue-clean safari-quit safari-open safari-restart reload-ext functional-check
+        health doctor queue-clean safari-quit safari-open safari-restart reload-ext functional-check dmg
 
 help: ## Show this help
 	@grep -E '^[a-z_-]+:.*##' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -146,6 +146,9 @@ safari-restart: safari-quit safari-open ## Quit + reopen Safari (resets Allow Un
 	@echo "WARNING: 'Allow Unsigned Extensions' was reset by the Safari restart."
 	@echo "  -> Safari > Develop > Allow Unsigned Extensions"
 	@echo "  -> Then run: make health"
+
+dmg: build ## Create a DMG installer from the built app
+	@scripts/create-dmg.sh "$(BUILD_DIR)/Build/Products/Debug/Claude in Safari.app"
 
 safari-quit: ## Quit Safari (tabs are preserved on restart)
 	@if pgrep -x Safari >/dev/null 2>&1; then \
