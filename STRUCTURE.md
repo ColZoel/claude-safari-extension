@@ -7,6 +7,7 @@ claude-safari-extension/
 ├── PRINCIPLES.md                            # Project rules (immutable without user approval)
 ├── STRUCTURE.md                             # This file — canonical project layout
 ├── CLAUDE.md                                # Claude Code conventions and context
+├── ExportOptions.plist                      # App Store Connect export options for CI/CD
 │
 ├── ClaudeInSafari/                          # Xcode project root
 │   ├── ClaudeInSafari.xcodeproj

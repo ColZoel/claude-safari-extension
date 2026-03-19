@@ -363,6 +363,8 @@ class ToolRouter: MCPSocketServerDelegate {
             handleUploadImage(arguments: arguments, id: id, clientId: clientId)
         } else if toolName == "file_upload" {
             handleFileUpload(arguments: arguments, id: id, clientId: clientId)
+        } else if toolName == "resize_window" {
+            handleResizeWindow(arguments: arguments, id: id, clientId: clientId)
         } else if nativeTools.contains(toolName) {
             sendError(id: id, code: -32000, message: "Native tool '\(toolName)' not yet implemented", to: clientId)
         } else {
