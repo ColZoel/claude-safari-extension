@@ -42,4 +42,16 @@ final class FileAccessManagerTests: XCTestCase {
         manager.storeBookmark(Data([0x01]), for: "/Users/test")
         XCTAssertTrue(manager.hasAccess(to: "/Users/test/deep/nested/file.txt"))
     }
+
+    func testHasAccessReturnsFalseForPrefixCollision() {
+        let defaults = UserDefaults(suiteName: "test-\(UUID())")!
+        let manager = FileAccessManager(defaults: defaults)
+        manager.storeBookmark(Data([0x01]), for: "/Users/test")
+        XCTAssertFalse(manager.hasAccess(to: "/Users/testing/secret.txt"))
+    }
+
+    func testResolveAccessReturnsNilWithNoBookmark() {
+        let manager = FileAccessManager(defaults: UserDefaults(suiteName: "test-\(UUID())")!)
+        XCTAssertNil(manager.resolveAccess(for: "/Users/test/file.txt"))
+    }
 }

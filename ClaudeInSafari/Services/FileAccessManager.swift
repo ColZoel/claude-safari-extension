@@ -61,7 +61,7 @@ final class FileAccessManager {
     }
 
     /// Resolve bookmark and start accessing the security-scoped resource.
-    /// Returns the resolved URL, or nil if bookmark is stale.
+    /// Returns the resolved URL, or nil if resolution fails.
     func resolveAccess(for path: String) -> URL? {
         guard let directory = findBookmarkDirectory(for: path) else { return nil }
         guard let bookmarkData = defaults.data(forKey: Self.bookmarkKeyPrefix + directory) else { return nil }
@@ -99,7 +99,8 @@ final class FileAccessManager {
         for key in defaults.dictionaryRepresentation().keys {
             guard key.hasPrefix(Self.bookmarkKeyPrefix) else { continue }
             let dir = String(key.dropFirst(Self.bookmarkKeyPrefix.count))
-            if path.hasPrefix(dir) { return dir }
+            let normalizedDir = dir.hasSuffix("/") ? dir : dir + "/"
+            if path.hasPrefix(normalizedDir) || path == dir { return dir }
         }
         return nil
     }
