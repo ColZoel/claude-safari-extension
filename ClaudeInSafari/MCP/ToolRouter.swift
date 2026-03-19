@@ -186,7 +186,7 @@ class ToolRouter: MCPSocketServerDelegate {
     /// notification action fires.
     /// • Extension-forwarded calls: immediately fails all entries in `pendingRequests`
     ///   with a "Cancelled by user" error response.
-    /// • Native calls (screenshot, gif, resize_window): sets `nativeCallCancelled` so
+    /// • Native calls (screenshot, gif): sets `nativeCallCancelled` so
     ///   each completion handler sends an error instead of the result (best-effort).
     /// The flag is NOT reset here — each native completion handler resets it to false
     /// when it fires, ensuring it remains true long enough for any in-flight handler
