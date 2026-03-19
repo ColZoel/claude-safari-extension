@@ -847,4 +847,229 @@ final class ToolRouterDispatchTests: XCTestCase {
     func testParseZoomRegion_missingRegion_returnsNil() {
         XCTAssertNil(router.parseZoomRegion([:]))
     }
+
+    // MARK: - Startup Cleanup (Spec 023 H1 + M1)
+
+    func testPerformStartupCleanup_truncatesQueue() throws {
+        guard let url = AppConstants.pendingRequestsQueueURL else {
+            throw XCTSkip("App Group unavailable in test environment")
+        }
+        let dir = url.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try JSONEncoder().encode(["stale-request-1", "stale-request-2"]).write(to: url, options: .atomic)
+
+        let router = ToolRouter()
+        router.performStartupCleanup()
+
+        let data = try Data(contentsOf: url)
+        let queue = try JSONDecoder().decode([String].self, from: data)
+        XCTAssertEqual(queue, [], "Queue should be empty after startup cleanup")
+    }
+
+    func testPerformStartupCleanup_deletesResponseFiles() throws {
+        guard let dir = AppConstants.responsesDirectoryURL else {
+            throw XCTSkip("App Group unavailable in test environment")
+        }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try "{}".data(using: .utf8)!.write(to: dir.appendingPathComponent("orphan-1.json"), options: .atomic)
+        try "{}".data(using: .utf8)!.write(to: dir.appendingPathComponent("orphan-2.json"), options: .atomic)
+
+        let router = ToolRouter()
+        router.performStartupCleanup()
+
+        let remaining = try FileManager.default.contentsOfDirectory(atPath: dir.path)
+        XCTAssertEqual(remaining.count, 0, "All response files should be deleted after startup cleanup")
+    }
+
+    func testPerformStartupCleanup_appGroupUnavailable_doesNotCrash() {
+        let router = ToolRouter()
+        router.performStartupCleanup()
+    }
+
+    func testPerformStartupCleanup_deletesStaleGenerationFile() throws {
+        guard let genURL = AppConstants.extensionGenerationURL else {
+            throw XCTSkip("App Group unavailable in test environment")
+        }
+        let dir = genURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try "stale-gen".data(using: .utf8)!.write(to: genURL, options: .atomic)
+        addTeardownBlock { try? FileManager.default.removeItem(at: genURL) }
+        XCTAssertTrue(FileManager.default.fileExists(atPath: genURL.path), "Precondition: generation file exists")
+
+        let router = ToolRouter()
+        router.performStartupCleanup()
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: genURL.path),
+                        "Generation file should be deleted after startup cleanup")
+    }
+
+    // MARK: - Extension Generation Detection (Spec 023 H2)
+
+    func testReadExtensionGeneration_returnsFileContents() throws {
+        guard let url = AppConstants.extensionGenerationURL else {
+            throw XCTSkip("App Group unavailable in test environment")
+        }
+        let dir = url.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try "test-gen-abc".data(using: .utf8)!.write(to: url, options: .atomic)
+        addTeardownBlock { try? FileManager.default.removeItem(at: url) }
+
+        let router = ToolRouter()
+        let gen = router.readExtensionGeneration()
+        XCTAssertEqual(gen, "test-gen-abc")
+    }
+
+    func testReadExtensionGeneration_returnsNilWhenFileAbsent() throws {
+        if let url = AppConstants.extensionGenerationURL {
+            try? FileManager.default.removeItem(at: url)
+        }
+
+        let router = ToolRouter()
+        let gen = router.readExtensionGeneration()
+        XCTAssertNil(gen, "Should return nil when generation file does not exist")
+    }
+
+    func testPollForExtensionResponse_generationMismatch_failsImmediately() throws {
+        guard let genURL = AppConstants.extensionGenerationURL else {
+            throw XCTSkip("App Group unavailable in test environment")
+        }
+        guard let dir = AppConstants.responsesDirectoryURL else {
+            throw XCTSkip("App Group unavailable in test environment")
+        }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try "gen-A".data(using: .utf8)!.write(to: genURL, options: .atomic)
+        addTeardownBlock { try? FileManager.default.removeItem(at: genURL) }
+
+        let mockServer = MockMCPSocketServer()
+        let router = ToolRouter(
+            screenshotService: ScreenshotService(),
+            gifService: GifService(),
+            fileService: FileService()
+        )
+        router.setServer(mockServer)
+
+        let requestId = "gen-mismatch-test"
+        router.injectPendingRequest(requestId: requestId, clientId: "test-client", jsonrpcId: 42)
+
+        // Change generation to simulate a background page reload
+        try "gen-B".data(using: .utf8)!.write(to: genURL, options: .atomic)
+
+        router.pollForExtensionResponse(requestId: requestId, deadline: Date().addingTimeInterval(30),
+                                                generationSnapshot: "gen-A")
+
+        let expectation = XCTestExpectation(description: "Poll detects generation mismatch")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { expectation.fulfill() }
+        wait(for: [expectation], timeout: 1.0)
+
+        let json = mockServer.lastSentJSON()
+        let errorMsg = (json?["error"] as? [String: Any])?["message"] as? String ?? ""
+        XCTAssertTrue(errorMsg.contains("Extension reloaded"), "Expected generation mismatch error, got: \(errorMsg)")
+    }
+
+    func testPollForExtensionResponse_nilGeneration_doesNotFail() throws {
+        guard let dir = AppConstants.responsesDirectoryURL else {
+            throw XCTSkip("App Group unavailable in test environment")
+        }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        if let genURL = AppConstants.extensionGenerationURL {
+            try? FileManager.default.removeItem(at: genURL)
+        }
+
+        let mockServer = MockMCPSocketServer()
+        let router = ToolRouter(
+            screenshotService: ScreenshotService(),
+            gifService: GifService(),
+            fileService: FileService()
+        )
+        router.setServer(mockServer)
+
+        let requestId = "nil-gen-test"
+        router.injectPendingRequest(requestId: requestId, clientId: "test-client", jsonrpcId: 43)
+
+        router.pollForExtensionResponse(requestId: requestId, deadline: Date().addingTimeInterval(0.15),
+                                                generationSnapshot: nil)
+
+        let expectation = XCTestExpectation(description: "Poll times out normally")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { expectation.fulfill() }
+        wait(for: [expectation], timeout: 1.0)
+
+        let json = mockServer.lastSentJSON()
+        let errorMsg = (json?["error"] as? [String: Any])?["message"] as? String ?? ""
+        XCTAssertTrue(errorMsg.contains("timeout"), "Expected timeout error, got: \(errorMsg)")
+    }
+
+    func testPollForExtensionResponse_responseFileTakesPriorityOverGenerationMismatch() throws {
+        guard let genURL = AppConstants.extensionGenerationURL else {
+            throw XCTSkip("App Group unavailable in test environment")
+        }
+        guard let dir = AppConstants.responsesDirectoryURL else {
+            throw XCTSkip("App Group unavailable in test environment")
+        }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
+        // Write initial generation and then change it (simulating a reload)
+        try "gen-old".data(using: .utf8)!.write(to: genURL, options: .atomic)
+        addTeardownBlock { try? FileManager.default.removeItem(at: genURL) }
+
+        let mockServer = MockMCPSocketServer()
+        let router = ToolRouter(
+            screenshotService: ScreenshotService(),
+            gifService: GifService(),
+            fileService: FileService()
+        )
+        router.setServer(mockServer)
+
+        let requestId = "priority-test"
+        router.injectPendingRequest(requestId: requestId, clientId: "test-client", jsonrpcId: 99)
+
+        // Write a valid response file AND a mismatched generation — response should win
+        let responseJSON = """
+        {"result":{"content":[{"type":"text","text":"success"}]}}
+        """
+        try responseJSON.data(using: .utf8)!.write(
+            to: dir.appendingPathComponent("\(requestId).json"), options: .atomic)
+        try "gen-new".data(using: .utf8)!.write(to: genURL, options: .atomic)
+
+        router.pollForExtensionResponse(requestId: requestId, deadline: Date().addingTimeInterval(30),
+                                                generationSnapshot: "gen-old")
+
+        let expectation = XCTestExpectation(description: "Response delivered despite generation mismatch")
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { expectation.fulfill() }
+        wait(for: [expectation], timeout: 1.0)
+
+        // Should get a success response, NOT a generation mismatch error
+        let json = mockServer.lastSentJSON()
+        let hasResult = json?["result"] != nil
+        let errorMsg = (json?["error"] as? [String: Any])?["message"] as? String
+        XCTAssertTrue(hasResult, "Expected success result, got error: \(errorMsg ?? "nil")")
+        XCTAssertNil(errorMsg, "Should not have error when response file exists")
+    }
+
+    // MARK: - Response File Cleanup (Spec 023 M1)
+
+    func testFailPendingRequest_deletesResponseFile() throws {
+        guard let dir = AppConstants.responsesDirectoryURL else {
+            throw XCTSkip("App Group unavailable in test environment")
+        }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
+        let requestId = "test-cleanup-req"
+        let responseFile = dir.appendingPathComponent("\(requestId).json")
+        try "{}".data(using: .utf8)!.write(to: responseFile, options: .atomic)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: responseFile.path), "Precondition: file exists")
+
+        let mockServer = MockMCPSocketServer()
+        let router = ToolRouter(
+            screenshotService: ScreenshotService(),
+            gifService: GifService(),
+            fileService: FileService()
+        )
+        router.setServer(mockServer)
+
+        router.injectPendingRequest(requestId: requestId, clientId: "test-client", jsonrpcId: 1)
+        router.failPendingRequest(requestId: requestId, message: "test timeout")
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: responseFile.path),
+                        "Response file should be deleted after failPendingRequest")
+    }
 }

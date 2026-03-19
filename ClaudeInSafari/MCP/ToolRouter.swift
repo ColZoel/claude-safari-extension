@@ -37,6 +37,57 @@ class ToolRouter: MCPSocketServerDelegate {
         self.notificationCenter = notificationCenter
     }
 
+    /// One-time startup cleanup: truncate stale pending requests and delete orphaned response files.
+    /// Called by AppDelegate before the socket server starts accepting connections.
+    /// All operations are best-effort — if the App Group is unavailable, cleanup is skipped.
+    func performStartupCleanup() {
+        // H1: Truncate pending request queue — any entries are from a dead session
+        if let queueURL = AppConstants.pendingRequestsQueueURL {
+            let dir = queueURL.deletingLastPathComponent()
+            do {
+                try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+                try JSONEncoder().encode([String]()).write(to: queueURL, options: .atomic)
+            } catch {
+                NSLog("ToolRouter: startup cleanup failed to truncate queue: %@", error.localizedDescription)
+            }
+        } else {
+            NSLog("ToolRouter: startup cleanup skipped — App Group unavailable")
+        }
+
+        // M1: Delete all orphaned response files
+        if let responsesDir = AppConstants.responsesDirectoryURL {
+            do {
+                let files = try FileManager.default.contentsOfDirectory(atPath: responsesDir.path)
+                for file in files where file.hasSuffix(".json") {
+                    do {
+                        try FileManager.default.removeItem(atPath: responsesDir.appendingPathComponent(file).path)
+                    } catch {
+                        NSLog("ToolRouter: startup cleanup failed to delete %@: %@", file, error.localizedDescription)
+                    }
+                }
+            } catch {
+                NSLog("ToolRouter: startup cleanup failed to list responses directory: %@", error.localizedDescription)
+            }
+        }
+
+        // H2: Delete stale generation file so readExtensionGeneration() returns nil
+        // until the extension sends a fresh extension_ready. Prevents false-positive
+        // "Extension reloaded" errors when a tool call arrives before the new marker.
+        if let genURL = AppConstants.extensionGenerationURL {
+            try? FileManager.default.removeItem(at: genURL)
+        }
+
+        NSLog("ToolRouter: startup cleanup complete")
+    }
+
+    /// Read the current extension generation marker from the App Group file.
+    /// Returns nil if the file does not exist or is unreadable.
+    func readExtensionGeneration() -> String? {
+        guard let url = AppConstants.extensionGenerationURL,
+              let data = try? Data(contentsOf: url) else { return nil }
+        return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     /// Staging set for native tools whose handler branch is not yet wired up in handleToolCall().
     /// Empty by default. Add a tool name here to have it return "not yet implemented" instead of
     /// being silently forwarded to the extension (useful while developing a new native handler).
@@ -668,20 +719,25 @@ class ToolRouter: MCPSocketServerDelegate {
             return
         }
 
+        let generationSnapshot = readExtensionGeneration()
+
         pendingRequestsLock.lock()
         pendingRequests[queued.requestId] = (clientId: clientId, jsonrpcId: id)
         pendingToolContext[queued.requestId] = (toolName: queued.tool, arguments: arguments)
         pendingRequestsLock.unlock()
 
-        pollForExtensionResponse(requestId: queued.requestId, deadline: Date().addingTimeInterval(30))
+        pollForExtensionResponse(requestId: queued.requestId, deadline: Date().addingTimeInterval(30),
+                                 generationSnapshot: generationSnapshot)
     }
 
-    private func pollForExtensionResponse(requestId: String, deadline: Date) {
+    func pollForExtensionResponse(requestId: String, deadline: Date,
+                                           generationSnapshot: String?) {
         guard let fileURL = AppConstants.responseFileURL(for: requestId) else {
             failPendingRequest(requestId: requestId, message: "App Group unavailable")
             return
         }
 
+        // Check for response file first — a valid response takes priority over generation changes
         if let data = try? Data(contentsOf: fileURL),
            let responseString = String(data: data, encoding: .utf8) {
             // Delete the file so it isn't processed twice.
@@ -700,6 +756,18 @@ class ToolRouter: MCPSocketServerDelegate {
             return
         }
 
+        // H2: Check for extension generation mismatch (background page reloaded)
+        // Only check when we have a snapshot — nil means extension hadn't sent
+        // extension_ready yet, so we can't detect a reload.
+        if let snapshot = generationSnapshot {
+            let current = readExtensionGeneration()
+            if let current = current, current != snapshot {
+                NSLog("ToolRouter: extension generation changed (\(snapshot) → \(current)), failing request \(requestId)")
+                failPendingRequest(requestId: requestId, message: "Extension reloaded during tool execution")
+                return
+            }
+        }
+
         guard Date() < deadline else {
             failPendingRequest(requestId: requestId, message: "Extension response timeout (30s)")
             return
@@ -711,11 +779,23 @@ class ToolRouter: MCPSocketServerDelegate {
         guard isActive else { return }
 
         DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            self?.pollForExtensionResponse(requestId: requestId, deadline: deadline)
+            self?.pollForExtensionResponse(requestId: requestId, deadline: deadline,
+                                            generationSnapshot: generationSnapshot)
         }
     }
 
-    private func failPendingRequest(requestId: String, message: String) {
+    func failPendingRequest(requestId: String, message: String) {
+        // M1: Delete the response file to prevent orphans
+        if let url = AppConstants.responseFileURL(for: requestId) {
+            do {
+                try FileManager.default.removeItem(at: url)
+            } catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileNoSuchFileError {
+                // File doesn't exist — not an error
+            } catch {
+                NSLog("ToolRouter: failed to delete response file for %@: %@", requestId, error.localizedDescription)
+            }
+        }
+
         pendingRequestsLock.lock()
         let pending = pendingRequests.removeValue(forKey: requestId)
         pendingToolContext.removeValue(forKey: requestId)
@@ -724,6 +804,7 @@ class ToolRouter: MCPSocketServerDelegate {
             sendError(id: pending.jsonrpcId, code: -32000, message: message, to: pending.clientId)
         }
     }
+
 
     // MARK: - Extension Queue
 

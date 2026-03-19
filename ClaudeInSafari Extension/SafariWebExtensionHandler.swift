@@ -24,6 +24,8 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             handleToolResponse(message: message, context: context)
         case "status":
             handleStatusRequest(context: context)
+        case "extension_ready":
+            handleExtensionReady(message: message, context: context)
         default:
             Self.logger.warning("Unknown message type: \(messageType)")
             respond(with: ["status": "error", "message": "Unknown message type"], context: context)
@@ -88,6 +90,28 @@ class SafariWebExtensionHandler: NSObject, NSExtensionRequestHandling {
             isConnected = value.trimmingCharacters(in: .whitespacesAndNewlines) == "1"
         }
         respond(with: ["status": "ok", "mcpConnected": isConnected], context: context)
+    }
+
+    /// Write the extension generation marker to the App Group container.
+    /// Always responds "ok" — sendNativeMessage resolves (not rejects) with the response,
+    /// so returning an error status would not trigger background.js's .catch() handler.
+    /// If the write fails, the nil-generation fallback in pollForExtensionResponse handles it.
+    private func handleExtensionReady(message: [String: Any], context: NSExtensionContext) {
+        guard let generation = message["generation"] as? String, !generation.isEmpty else {
+            Self.logger.warning("extension_ready: missing or empty generation string — reload detection disabled")
+            respond(with: ["status": "ok"], context: context)
+            return
+        }
+        if let url = AppConstants.extensionGenerationURL {
+            do {
+                try generation.data(using: .utf8)!.write(to: url, options: .atomic)
+            } catch {
+                Self.logger.error("extension_ready: failed to write generation file: \(error.localizedDescription)")
+            }
+        } else {
+            Self.logger.error("extension_ready: extensionGenerationURL is nil (App Group unavailable)")
+        }
+        respond(with: ["status": "ok"], context: context)
     }
 
     // MARK: - Helpers
