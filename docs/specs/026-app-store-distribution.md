@@ -23,10 +23,9 @@ All 20 MCP tools are implemented and production-hardened (Specs 022–025). The 
 
 The `resize_window` tool is implemented entirely in Swift (no JS file exists). Remove all touchpoints:
 
-- Delete `ClaudeInSafari/Services/AppleScriptBridge.swift`
-- Delete `Tests/Swift/AppleScriptBridgeTests.swift`
-- Remove `resize_window` case and handler from `ToolRouter.swift`
-- Remove `AppleScriptBridge` import/property from `ToolRouter.swift`
+- **Keep** `ClaudeInSafari/Services/AppleScriptBridge.swift` in the project (preserved for future re-enablement)
+- **Keep** `Tests/Swift/AppleScriptBridgeTests.swift` (tests validation logic, compiles without entitlement)
+- Disconnect `resize_window` from `ToolRouter.swift`: remove case dispatch, remove tool definition from schema, remove `AppleScriptBridge` property instantiation
 - Remove `com.apple.security.temporary-exception.apple-events` from `ClaudeInSafari/ClaudeInSafari.entitlements`
 - Remove `NSAppleEventsUsageDescription` from `ClaudeInSafari/Info.plist`
 - Remove Accessibility permission from onboarding:
@@ -37,7 +36,7 @@ The `resize_window` tool is implemented entirely in Swift (no JS file exists). R
   - Remove Accessibility screen from `OnboardingWindowController.swift`
   - Onboarding becomes 4 screens: Welcome → Safari Extension → Screen Recording → Done
 - Remove `resize_window` from MCP tool schema in `ToolRouter.swift` (tool should no longer be advertised to clients)
-- Update `STRUCTURE.md` to remove `AppleScriptBridge.swift` reference and update onboarding comment from "5-screen setup wizard: Welcome -> 3 permission steps -> Done" to "4-screen setup wizard: Welcome -> 2 permission steps -> Done"
+- Update `STRUCTURE.md` to mark `AppleScriptBridge.swift` as disabled and update onboarding comment from "5-screen setup wizard: Welcome -> 3 permission steps -> Done" to "4-screen setup wizard: Welcome -> 2 permission steps -> Done"
 - Update `CLAUDE.md` to remove AppleScript references from Key Technical Decisions
 
 ### 2. Add App Sandbox to Main App
@@ -222,9 +221,9 @@ Add two menu items:
 
 ## Files Modified
 
-### Deleted
-- `ClaudeInSafari/Services/AppleScriptBridge.swift`
-- `Tests/Swift/AppleScriptBridgeTests.swift`
+### Disabled (preserved for future re-enablement)
+- `ClaudeInSafari/Services/AppleScriptBridge.swift` — disconnected from ToolRouter, not deleted
+- `Tests/Swift/AppleScriptBridgeTests.swift` — still compiles and runs (tests validation logic)
 
 ### New
 - `ClaudeInSafari/Services/FileAccessManager.swift` — security-scoped bookmark management
@@ -248,7 +247,7 @@ Add two menu items:
 - `ClaudeInSafari/Info.plist` — remove AppleEvents usage description
 - `.github/workflows/release.yml` — signing, notarization, DMG, App Store upload
 - `Makefile` — add `dmg` target
-- `STRUCTURE.md` — remove `AppleScriptBridge.swift`, add new files, update onboarding screen count
+- `STRUCTURE.md` — mark `AppleScriptBridge.swift` as disabled, add new files, update onboarding screen count
 - `CLAUDE.md` — remove AppleScript references, update Key Technical Decisions
 - `Tests/Swift/ToolRouterTests.swift` — remove `resize_window` tests, add `file_upload` bridge tests
 - `Tests/Swift/PermissionMonitorTests.swift` — remove accessibility-related test cases
@@ -270,7 +269,7 @@ Add two menu items:
 ## Testing
 - Verify `file_upload` works end-to-end with native bridge (base64 round-trip, security-scoped bookmark)
 - Verify `resize_window` tool is fully removed (no schema advertised, no code remaining)
-- Verify `AppleScriptBridge.swift` and its tests are deleted
+- Verify `AppleScriptBridge.swift` and its tests still compile (preserved but disconnected from ToolRouter)
 - Verify entitlements: `app-sandbox` present, no temporary exceptions
 - Verify DMG mounts, drag-to-Applications works, app launches from `/Applications`
 - Verify onboarding shows exactly 4 screens (Welcome → Extension → Screen Recording → Done)

@@ -14,9 +14,9 @@
 
 ## File Structure
 
-### Deleted
-- `ClaudeInSafari/Services/AppleScriptBridge.swift` — AppleScript bridge (only used by resize_window)
-- `Tests/Swift/AppleScriptBridgeTests.swift` — tests for above
+### Disabled (kept for future re-enablement)
+- `ClaudeInSafari/Services/AppleScriptBridge.swift` — AppleScript bridge, disconnected from ToolRouter but preserved
+- `Tests/Swift/AppleScriptBridgeTests.swift` — tests preserved, will still compile and run
 
 ### New
 - `ClaudeInSafari/Services/FileAccessManager.swift` — security-scoped bookmark management for sandbox file access
@@ -48,34 +48,32 @@
 
 ---
 
-## Task 1: Remove `resize_window` Tool
+## Task 1: Disable `resize_window` Tool (preserve code for future re-enablement)
 
 **Files:**
-- Delete: `ClaudeInSafari/Services/AppleScriptBridge.swift`
-- Delete: `Tests/Swift/AppleScriptBridgeTests.swift`
 - Modify: `ClaudeInSafari/MCP/ToolRouter.swift:206-215,358-365,600-635,1021-1093`
 - Modify: `ClaudeInSafari/ClaudeInSafari.entitlements:9-12`
 - Modify: `ClaudeInSafari/Info.plist` (NSAppleEventsUsageDescription)
-- Modify: `ClaudeInSafari.xcodeproj/project.pbxproj` (remove file references)
+- Keep: `ClaudeInSafari/Services/AppleScriptBridge.swift` (unchanged)
+- Keep: `Tests/Swift/AppleScriptBridgeTests.swift` (unchanged)
 
-- [ ] **Step 1: Remove resize_window from ToolRouter.swift**
+- [ ] **Step 1: Disconnect resize_window from ToolRouter.swift**
 
 In `ToolRouter.swift`:
 1. Remove `"resize_window"` from `executeScriptTools` set (~line 206)
 2. Remove the `case "resize_window"` dispatch in `handleToolCall()` (~line 358)
-3. Delete the entire `handleResizeWindow()` method (~lines 600-635)
-4. Remove the `resize_window` entry from `toolDefinitions` static array (~lines 1021-1093)
-5. Remove the `private let appleScriptBridge: AppleScriptBridge` property and its initialization in `init()`
+3. Comment out or remove the `handleResizeWindow()` method body (~lines 600-635), replacing with a "tool disabled" error response. Keep the method signature so the code documents what was there:
+```swift
+/// Disabled for App Store compatibility (Spec 026). AppleScriptBridge is preserved
+/// in the codebase for future re-enablement via browser.windows.update() or similar.
+private func handleResizeWindow(...) {
+    sendError("resize_window is temporarily disabled (App Store compatibility)")
+}
+```
+4. Remove the `resize_window` entry from `toolDefinitions` static array (~lines 1057-1061) so it is not advertised to clients
+5. Remove the `private let appleScriptBridge: AppleScriptBridge` property and its initialization in `init()` (the class remains in the project but is no longer instantiated)
 
-- [ ] **Step 2: Delete AppleScriptBridge.swift and its tests**
-
-Delete both files:
-- `ClaudeInSafari/Services/AppleScriptBridge.swift` (216 lines)
-- `Tests/Swift/AppleScriptBridgeTests.swift`
-
-Remove both file references from `ClaudeInSafari.xcodeproj/project.pbxproj`.
-
-- [ ] **Step 3: Remove AppleScript entitlement and usage description**
+- [ ] **Step 2: Remove AppleScript entitlement and usage description**
 
 In `ClaudeInSafari/ClaudeInSafari.entitlements`, remove:
 ```xml
@@ -87,20 +85,22 @@ In `ClaudeInSafari/ClaudeInSafari.entitlements`, remove:
 
 In `ClaudeInSafari/Info.plist`, remove the `NSAppleEventsUsageDescription` key and its string value.
 
-- [ ] **Step 4: Remove resize_window tests from ToolRouterTests.swift**
+**Note:** `AppleScriptBridge.swift` and `AppleScriptBridgeTests.swift` stay in the project. The bridge class compiles fine without the entitlement — the entitlement is only needed at runtime. The tests test validation logic (dimensions, error classification) which doesn't require the entitlement.
 
-In `Tests/Swift/ToolRouterTests.swift`, remove any test cases that reference `resize_window` or `handleResizeWindow`.
+- [ ] **Step 3: Remove resize_window tests from ToolRouterTests.swift**
 
-- [ ] **Step 5: Build and run tests**
+In `Tests/Swift/ToolRouterTests.swift`, remove any test cases that reference `resize_window` or `handleResizeWindow` (these test the ToolRouter dispatch, not AppleScriptBridge itself).
+
+- [ ] **Step 4: Build and run tests**
 
 Run: `make build && make test-swift`
-Expected: Build succeeds. All Swift tests pass (minus deleted AppleScriptBridge tests).
+Expected: Build succeeds. All Swift tests pass including AppleScriptBridge tests (they test validation, not runtime execution).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```
 git add -A
-git commit -m "feat: remove resize_window tool for App Store compatibility (Spec 026 §1)"
+git commit -m "feat: disable resize_window for App Store compatibility, preserve code (Spec 026 §1)"
 ```
 
 ---
@@ -793,9 +793,8 @@ git commit -m "feat: update CI/CD with signing, notarization, DMG pipeline (Spec
 
 - [ ] **Step 1: Update STRUCTURE.md**
 
-1. Remove `AppleScriptBridge.swift` from the Services section
-2. Remove `AppleScriptBridgeTests.swift` from the Tests section
-3. Add `FileAccessManager.swift` to the Services section
+1. Add a `(disabled — Spec 026)` note next to `AppleScriptBridge.swift` in the Services section
+2. Add `FileAccessManager.swift` to the Services section
 4. Add `FileAccessManagerTests.swift` to the Tests section
 5. Add `scripts/create-dmg.sh` and `scripts/bump-version.sh` to the scripts section
 6. Update onboarding comment from "5-screen setup wizard: Welcome -> 3 permission steps -> Done" to "4-screen setup wizard: Welcome -> 2 permission steps -> Done"
