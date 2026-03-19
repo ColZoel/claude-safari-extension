@@ -15,9 +15,9 @@ extension UNUserNotificationCenter: NotificationCenterProtocol {}
 class ToolRouter: MCPSocketServerDelegate {
     private weak var server: MCPSocketServer?
     private let screenshotService: ScreenshotService
-    private let appleScriptBridge = AppleScriptBridge()
     private let gifService: GifService
     private let fileService: FileService
+    private let fileAccessManager: FileAccessManager
     private let notificationCenter: NotificationCenterProtocol
 
     // Production init — all services created fresh
@@ -31,10 +31,12 @@ class ToolRouter: MCPSocketServerDelegate {
 
     // Testable init — inject mock services and notification center for unit tests
     init(screenshotService: ScreenshotService, gifService: GifService, fileService: FileService,
+         fileAccessManager: FileAccessManager = FileAccessManager(),
          notificationCenter: NotificationCenterProtocol = UNUserNotificationCenter.current()) {
         self.screenshotService = screenshotService
         self.gifService = gifService
         self.fileService = fileService
+        self.fileAccessManager = fileAccessManager
         self.notificationCenter = notificationCenter
     }
 
@@ -187,7 +189,7 @@ class ToolRouter: MCPSocketServerDelegate {
     /// notification action fires.
     /// • Extension-forwarded calls: immediately fails all entries in `pendingRequests`
     ///   with a "Cancelled by user" error response.
-    /// • Native calls (screenshot, gif, resize_window): sets `nativeCallCancelled` so
+    /// • Native calls (screenshot, gif): sets `nativeCallCancelled` so
     ///   each completion handler sends an error instead of the result (best-effort).
     /// The flag is NOT reset here — each native completion handler resets it to false
     /// when it fires, ensuring it remains true long enough for any in-flight handler
@@ -355,14 +357,14 @@ class ToolRouter: MCPSocketServerDelegate {
            let action = arguments["action"] as? String,
            action == "screenshot" || action == "zoom" {
             handleScreenshotAction(action: action, arguments: arguments, id: id, clientId: clientId)
-        } else if toolName == "resize_window" {
-            handleResizeWindow(arguments: arguments, id: id, clientId: clientId)
         } else if toolName == "gif_creator" {
             handleGifCreator(arguments: arguments, id: id, clientId: clientId)
         } else if toolName == "upload_image" {
             handleUploadImage(arguments: arguments, id: id, clientId: clientId)
         } else if toolName == "file_upload" {
             handleFileUpload(arguments: arguments, id: id, clientId: clientId)
+        } else if toolName == "resize_window" {
+            handleResizeWindow(arguments: arguments, id: id, clientId: clientId)
         } else if nativeTools.contains(toolName) {
             sendError(id: id, code: -32000, message: "Native tool '\(toolName)' not yet implemented", to: clientId)
         } else {
@@ -597,41 +599,10 @@ class ToolRouter: MCPSocketServerDelegate {
 
     // MARK: - Native Window Resize
 
+    /// Disabled for App Store compatibility (Spec 026). AppleScriptBridge is preserved
+    /// in the codebase for future re-enablement via browser.windows.update() or similar.
     private func handleResizeWindow(arguments: [String: Any], id: Any?, clientId: String) {
-        guard let (w, h) = parseResizeDimensions(arguments) else {
-            if arguments["width"] == nil || arguments["height"] == nil {
-                sendError(id: id, code: -32000, message: "Both width and height parameters are required", to: clientId)
-            } else {
-                sendError(id: id, code: -32000, message: "Width and height must be numbers", to: clientId)
-            }
-            return
-        }
-
-        // Truncate to integers per spec (e.g. 1024.7 → 1024).
-        // Note: values near the 200-pixel minimum truncate down — 199.9 becomes 199 and will fail validation.
-        let tabIdSupplied = arguments["tabId"] != nil
-        // Warn callers that tabId is accepted but ignored — tabId→window resolution
-        // requires extension routing which is not yet implemented (Spec 016 §Window Resolution).
-        appleScriptBridge.resizeWindow(width: Int(w), height: Int(h)) { [weak self] result in
-            guard let self else { return }
-            self.pendingRequestsLock.lock()
-            let cancelled = self.nativeCallCancelled
-            if cancelled { self.nativeCallCancelled = false }
-            self.pendingRequestsLock.unlock()
-            guard !cancelled else {
-                self.sendError(id: id, code: -32000, message: "Cancelled by user", to: clientId)
-                return
-            }
-            switch result {
-            case .success(var message):
-                if tabIdSupplied {
-                    message += " (tabId ignored — always resizes the frontmost Safari window)"
-                }
-                sendResult(id: id, result: ["content": [["type": "text", "text": message]]], to: clientId)
-            case .failure(let error):
-                sendError(id: id, code: -32000, message: error.userMessage, to: clientId)
-            }
-        }
+        sendError(id: id, code: -32000, message: "resize_window is temporarily disabled (App Store compatibility)", to: clientId)
     }
 
     /// Parses a zoom region from tool arguments.
@@ -760,6 +731,44 @@ class ToolRouter: MCPSocketServerDelegate {
         guard let ref = arguments["ref"] as? String, !ref.isEmpty else {
             sendError(id: id, code: -32000, message: "ref parameter is required", to: clientId)
             return
+        }
+
+        // Sandbox access: prompt for each distinct directory that lacks a bookmark.
+        // A single directory grant covers all files within it, so we deduplicate by parent dir.
+        let needsPrompt = paths.contains { fileAccessManager.needsAccessPrompt(for: $0) }
+        if needsPrompt {
+            DispatchQueue.main.async { [self] in
+                // Loop until all paths are covered — each grant may cover multiple files
+                while let ungrantedPath = paths.first(where: { self.fileAccessManager.needsAccessPrompt(for: $0) }) {
+                    guard self.fileAccessManager.requestAccess(for: ungrantedPath) else {
+                        self.sendError(id: id, code: -32000,
+                                       message: "File access denied — user cancelled the folder access prompt",
+                                       to: clientId)
+                        return
+                    }
+                }
+                self.readAndForwardFiles(paths: paths, arguments: arguments, id: id, clientId: clientId)
+            }
+        } else {
+            readAndForwardFiles(paths: paths, arguments: arguments, id: id, clientId: clientId)
+        }
+    }
+
+    /// Read files with security-scoped bookmark resolution and forward to extension.
+    private func readAndForwardFiles(paths: [String], arguments: [String: Any], id: Any?, clientId: String) {
+        // Resolve security-scoped access for sandboxed file reads
+        var resolvedURLs: [URL] = []
+        for path in paths {
+            if let url = fileAccessManager.resolveAccess(for: path) {
+                resolvedURLs.append(url)
+            } else {
+                NSLog("readAndForwardFiles: failed to resolve security-scoped access for '%@'", path)
+            }
+        }
+        defer {
+            for url in resolvedURLs {
+                fileAccessManager.stopAccess(for: url)
+            }
         }
 
         switch fileService.readFiles(paths: paths) {
@@ -1052,11 +1061,6 @@ class ToolRouter: MCPSocketServerDelegate {
             "tabId": prop("number", "Tab ID")
         ]),
         tool("get_page_text", "Extract raw text content from the page.", [
-            "tabId": prop("number", "Tab ID")
-        ]),
-        tool("resize_window", "Resize the current browser window to specified dimensions.", [
-            "width": prop("number", "Target window width in pixels"),
-            "height": prop("number", "Target window height in pixels"),
             "tabId": prop("number", "Tab ID")
         ]),
         tool("read_console_messages", "Read browser console messages from a specific tab.", [

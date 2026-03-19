@@ -7,6 +7,7 @@ claude-safari-extension/
 ├── PRINCIPLES.md                            # Project rules (immutable without user approval)
 ├── STRUCTURE.md                             # This file — canonical project layout
 ├── CLAUDE.md                                # Claude Code conventions and context
+├── ExportOptions.plist                      # App Store Connect export options for CI/CD
 │
 ├── ClaudeInSafari/                          # Xcode project root
 │   ├── ClaudeInSafari.xcodeproj
@@ -17,7 +18,7 @@ claude-safari-extension/
 │   │   │   ├── AppDelegate.swift            # App lifecycle — wires menu bar, onboarding, MCP server, notifications
 │   │   │   ├── BrandColors.swift            # NSColor extension: claudeOrange, claudeOrangeLight
 │   │   │   ├── MenuBarController.swift      # NSStatusItem, MenuBarState enum, icon compositing, menu construction
-│   │   │   ├── OnboardingWindowController.swift  # 5-screen setup wizard: Welcome → 3 permission steps → Done
+│   │   │   ├── OnboardingWindowController.swift  # 4-screen setup wizard: Welcome → 2 permission steps → Done
 │   │   │   └── PermissionMonitor.swift      # PermissionChecking protocol, SystemPermissionChecker, polling
 │   │   ├── MCP/
 │   │   │   ├── MCPSocketServer.swift        # Unix domain socket server (GCD-based)
@@ -25,8 +26,9 @@ claude-safari-extension/
 │   │   │   └── ToolRouter.swift             # Routes tool requests: native-handled vs extension-handled
 │   │   ├── Services/
 │   │   │   ├── ScreenshotService.swift      # ScreenCaptureKit-based screenshot capture
-│   │   │   ├── AppleScriptBridge.swift      # Safari window resize/management via AppleScript
+│   │   │   ├── AppleScriptBridge.swift      # Safari window resize/management via AppleScript (disabled — Spec 026)
 │   │   │   ├── FileService.swift            # Read local files for file_upload tool
+│   │   │   ├── FileAccessManager.swift      # Security-scoped bookmark management for App Sandbox file access
 │   │   │   └── GifService.swift             # GIF recording, capped frame buffer, and CGImageDestination encoding
 │   │   ├── Models/
 │   │   │   ├── MCPMessage.swift             # MCP JSON-RPC message types (Codable structs)
@@ -80,6 +82,7 @@ claude-safari-extension/
 │       ├── Swift/                            # XCTest suites for native app
 │       │   ├── AppDelegateTests.swift
 │       │   ├── AppleScriptBridgeTests.swift
+│       │   ├── FileAccessManagerTests.swift
 │       │   ├── FileServiceTests.swift
 │       │   ├── GifServiceTests.swift
 │       │   ├── MCPMessageTests.swift
@@ -118,7 +121,9 @@ claude-safari-extension/
 ├── scripts/                                 # Development and testing scripts
 │   ├── generate-app-icon.swift              # Generate AppIcon PNGs for macOS asset catalog
 │   ├── mcp-test.py                          # MCP socket test client (handshake + tool calls)
-│   └── validate-injected-scripts.js         # CI: syntax-check IIFE code strings in tool files
+│   ├── validate-injected-scripts.js         # CI: syntax-check IIFE code strings in tool files
+│   ├── create-dmg.sh                        # Build notarized DMG for direct distribution
+│   └── bump-version.sh                      # Bump CFBundleShortVersionString and CFBundleVersion in plists
 │
 └── docs/
     ├── debugging.md                         # Extension troubleshooting guide (read before debugging)

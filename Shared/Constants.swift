@@ -13,6 +13,11 @@ enum AppConstants {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId)
     }
 
+    /// Socket directory for MCP server (inside App Group container for sandbox compatibility).
+    static var socketDirectoryURL: URL? {
+        appGroupContainerURL?.appendingPathComponent("sockets")
+    }
+
     /// URL to the pending tool request FIFO queue file (JSON array of encoded request strings).
     static var pendingRequestsQueueURL: URL? {
         appGroupContainerURL?.appendingPathComponent(UserDefaultsKeys.pendingRequestsFile)
@@ -32,6 +37,11 @@ enum AppConstants {
     static var extensionGenerationURL: URL? {
         appGroupContainerURL?.appendingPathComponent("extension_generation")
     }
+
+    // MARK: - Branding
+    static let appDisplayName = "Claude in Safari"
+    static let brandColorHex = "#D97757"
+    static let updateURL = URL(string: "https://github.com/chriscantu/claude-safari-extension/releases")!
 
     /// File names for App Group communication.
     enum UserDefaultsKeys {

@@ -5,20 +5,14 @@ import XCTest
 // MARK: - Helpers
 
 private final class OnboardingMockChecker: PermissionChecking {
-    var accessibilityGranted = false
     var screenRecordingGranted = false
     var extensionEnabled = false
-    var registerAccessibilityCallCount = 0
-    var requestAccessibilityCallCount = 0
     var registerScreenRecordingCallCount = 0
 
-    func isAccessibilityGranted() -> Bool { accessibilityGranted }
     func isScreenRecordingGranted() -> Bool { screenRecordingGranted }
     func getExtensionEnabled(completion: @escaping (Bool) -> Void) {
         completion(extensionEnabled)
     }
-    func registerAccessibility() { registerAccessibilityCallCount += 1 }
-    func requestAccessibility() { requestAccessibilityCallCount += 1 }
     func registerScreenRecording() { registerScreenRecordingCallCount += 1 }
 }
 
@@ -57,9 +51,6 @@ final class OnboardingWindowControllerTests: XCTestCase {
         XCTAssertEqual(controller.currentScreen, .step(.screenRecording))
 
         controller.advance()
-        XCTAssertEqual(controller.currentScreen, .step(.accessibility))
-
-        controller.advance()
         XCTAssertEqual(controller.currentScreen, .done)
 
         controller.window?.orderOut(nil)
@@ -74,8 +65,8 @@ final class OnboardingWindowControllerTests: XCTestCase {
 
         controller.showOnboarding(startingAt: nil)
 
-        // Navigate to .done: welcome → safari → screenRecording → accessibility → done (4 advances)
-        for _ in 0..<4 { controller.advance() }
+        // Navigate to .done: welcome → safari → screenRecording → done (3 advances)
+        for _ in 0..<3 { controller.advance() }
         XCTAssertEqual(controller.currentScreen, .done)
         XCTAssertFalse(dismissFired, "onDismiss should not fire until advance from .done")
 
@@ -287,14 +278,13 @@ final class OnboardingWindowControllerTests: XCTestCase {
 
         // Before the callback delivers, manually advance past safariExtension
         controller.advance() // → screenRecording
-        controller.advance() // → accessibility
-        XCTAssertEqual(controller.currentScreen, .step(.accessibility))
+        XCTAssertEqual(controller.currentScreen, .step(.screenRecording))
 
         // Now drain — the stale safariExtension callback should be ignored
         let exp = expectation(description: "stale callback ignored")
         DispatchQueue.main.async {
-            XCTAssertEqual(controller.currentScreen, .step(.accessibility),
-                           "Stale callback for safariExtension must not advance from accessibility")
+            XCTAssertEqual(controller.currentScreen, .step(.screenRecording),
+                           "Stale callback for safariExtension must not advance from screenRecording")
             exp.fulfill()
         }
         waitForExpectations(timeout: 1)
@@ -352,7 +342,7 @@ final class OnboardingWindowControllerTests: XCTestCase {
     func testDoneScreen_containsExamplePrompt() {
         let (controller, _) = makeController()
         controller.showOnboarding(startingAt: nil)
-        for _ in 0..<4 { controller.advance() }
+        for _ in 0..<3 { controller.advance() }
         XCTAssertEqual(controller.currentScreen, .done)
 
         // Walk the view hierarchy to find a text field containing the example prompt
@@ -369,7 +359,7 @@ final class OnboardingWindowControllerTests: XCTestCase {
     func testDoneScreen_containsTryThisLabel() {
         let (controller, _) = makeController()
         controller.showOnboarding(startingAt: nil)
-        for _ in 0..<4 { controller.advance() }
+        for _ in 0..<3 { controller.advance() }
 
         let contentView = controller.window?.contentView
         let tryLabel = findTextField(in: contentView, matching: "Try this in Claude Code:")
@@ -383,7 +373,7 @@ final class OnboardingWindowControllerTests: XCTestCase {
     func testDoneScreen_containsCopyButton() {
         let (controller, _) = makeController()
         controller.showOnboarding(startingAt: nil)
-        for _ in 0..<4 { controller.advance() }
+        for _ in 0..<3 { controller.advance() }
 
         let contentView = controller.window?.contentView
         let copyButton = findButton(in: contentView, titled: "Copy")
@@ -397,7 +387,7 @@ final class OnboardingWindowControllerTests: XCTestCase {
     func testCopyButton_placesPromptOnPasteboard() {
         let (controller, _) = makeController()
         controller.showOnboarding(startingAt: nil)
-        for _ in 0..<4 { controller.advance() }
+        for _ in 0..<3 { controller.advance() }
         defer { NSPasteboard.general.clearContents() }
 
         let contentView = controller.window?.contentView
@@ -450,18 +440,6 @@ final class OnboardingWindowControllerTests: XCTestCase {
         // Silent registration SHOULD happen on step entry (so app appears in System Settings)
         XCTAssertEqual(checker.registerScreenRecordingCallCount, 1,
                        "registerScreenRecording must be called on step entry for TCC registration")
-
-        // Advance to Accessibility step
-        controller.advance()
-
-        // Silent registration SHOULD happen on step entry
-        XCTAssertEqual(checker.registerAccessibilityCallCount, 1,
-                       "registerAccessibility must be called on step entry for TCC registration")
-
-        // The prompt-dialog version must NOT be called on step entry — it shows a
-        // system TCC dialog that competes with our "Open System Settings" button.
-        XCTAssertEqual(checker.requestAccessibilityCallCount, 0,
-                       "requestAccessibility (with prompt) must not be called on step entry — defer to button tap")
 
         controller.window?.orderOut(nil)
     }

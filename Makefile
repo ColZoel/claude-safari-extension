@@ -29,8 +29,9 @@ SCHEME      := ClaudeInSafari
 TEST_SCHEME := ClaudeInSafariTests
 DEST        := platform=macOS
 USERNAME    := $(shell whoami)
-SOCK_DIR    := /tmp/claude-mcp-browser-bridge-$(USERNAME)
-DEV_SOCK    := $(SOCK_DIR)/dev.sock
+SOCK_DIR    := $(HOME)/Library/Group Containers/group.com.chriscantu.claudeinsafari/sockets
+LEGACY_SOCK_DIR := /tmp/claude-mcp-browser-bridge-$(USERNAME)
+DEV_SOCK    := $(LEGACY_SOCK_DIR)/dev.sock
 APP_NAME    := Claude in Safari
 APP_GROUP   := $(HOME)/Library/Group Containers/group.com.chriscantu.claudeinsafari
 EXT_BUNDLE  := com.chriscantu.claudeinsafari.extension
@@ -45,7 +46,7 @@ APP_PATH     = $(BUILD_DIR)/$(APP_NAME).app
 # ---------------------------------------------------------------------------
 
 .PHONY: dev build run kill test test-swift test-all send list-tools status clean help \
-        health doctor queue-clean safari-quit safari-open safari-restart reload-ext functional-check
+        health doctor queue-clean safari-quit safari-open safari-restart reload-ext functional-check dmg
 
 help: ## Show this help
 	@grep -E '^[a-z_-]+:.*##' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -81,13 +82,15 @@ run: ## Launch the app and create stable socket symlink
 	@pkill -f "$(APP_NAME).app/Contents/MacOS" 2>/dev/null || true
 	@sleep 0.5
 	@# Remove stale sockets
-	@rm -f $(SOCK_DIR)/*.sock 2>/dev/null || true
+	@rm -f "$(SOCK_DIR)"/*.sock 2>/dev/null || true
+	@rm -f "$(LEGACY_SOCK_DIR)"/*.sock 2>/dev/null || true
 	@echo "Launching $(APP_NAME)..."
 	@open "$(APP_PATH)"
-	@# Wait for the socket to appear (up to 5s)
+	@# Wait for the socket to appear in App Group dir (up to 5s)
 	@for i in 1 2 3 4 5 6 7 8 9 10; do \
-		sock=$$(ls $(SOCK_DIR)/*.sock 2>/dev/null | grep -v dev.sock | head -1); \
+		sock=$$(ls "$(SOCK_DIR)"/*.sock 2>/dev/null | head -1); \
 		if [ -n "$$sock" ]; then \
+			mkdir -p "$(LEGACY_SOCK_DIR)"; \
 			ln -sf "$$sock" "$(DEV_SOCK)"; \
 			echo "Socket ready: $(DEV_SOCK) -> $$sock"; \
 			break; \
@@ -143,6 +146,9 @@ safari-restart: safari-quit safari-open ## Quit + reopen Safari (resets Allow Un
 	@echo "WARNING: 'Allow Unsigned Extensions' was reset by the Safari restart."
 	@echo "  -> Safari > Develop > Allow Unsigned Extensions"
 	@echo "  -> Then run: make health"
+
+dmg: build ## Create a DMG installer from the built app
+	@scripts/create-dmg.sh "$(BUILD_DIR)/Build/Products/Debug/Claude in Safari.app"
 
 safari-quit: ## Quit Safari (tabs are preserved on restart)
 	@if pgrep -x Safari >/dev/null 2>&1; then \
@@ -366,14 +372,18 @@ status: ## Show app, socket, and extension status
 	@echo "=== Extension Process ==="
 	@ps aux | grep "ClaudeInSafari Extension.appex" | grep -v grep || echo "  Not running"
 	@echo ""
-	@echo "=== Socket Directory ==="
-	@ls -la $(SOCK_DIR)/ 2>/dev/null || echo "  $(SOCK_DIR)/ does not exist"
+	@echo "=== Socket Directory (App Group) ==="
+	@ls -la "$(SOCK_DIR)"/ 2>/dev/null || echo "  $(SOCK_DIR)/ does not exist"
+	@echo ""
+	@echo "=== Socket Directory (Legacy /tmp) ==="
+	@ls -la "$(LEGACY_SOCK_DIR)"/ 2>/dev/null || echo "  $(LEGACY_SOCK_DIR)/ does not exist"
 	@echo ""
 	@echo "=== Build ==="
 	@if [ -d "$(APP_PATH)" ]; then echo "  $(APP_PATH)"; else echo "  Not built (run: make build)"; fi
 
 clean: kill ## Kill app, remove sockets, clean build
-	@rm -rf $(SOCK_DIR) 2>/dev/null || true
+	@rm -rf "$(SOCK_DIR)" 2>/dev/null || true
+	@rm -rf "$(LEGACY_SOCK_DIR)" 2>/dev/null || true
 	@echo "Cleaned sockets"
 	@# IMPORTANT: Must run clean + build in one xcodebuild invocation.
 	@# A standalone `xcodebuild clean` followed by a separate `xcodebuild build`

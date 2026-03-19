@@ -25,6 +25,7 @@ class MCPSocketServer {
 
     private(set) var socketPath: String = ""
     private(set) var isListening: Bool = false
+    private var legacySymlinkPath: String?
 
     init(framer: MessageFramer) {
         self.framer = framer
@@ -36,10 +37,18 @@ class MCPSocketServer {
 
     /// Start listening on a Unix domain socket.
     func start() throws {
-        let username = NSUserName()
-        let directory = "/tmp/claude-mcp-browser-bridge-\(username)"
+        guard let socketDirURL = AppConstants.socketDirectoryURL else {
+            throw MCPSocketServerError.socketCreationFailed(ENOENT)
+        }
+        let directory = socketDirURL.path
         let pid = ProcessInfo.processInfo.processIdentifier
         socketPath = "\(directory)/\(pid).sock"
+
+        // macOS sun_path limit is 104 bytes; fail early with a clear error.
+        let sunPathLimit = MemoryLayout.size(ofValue: sockaddr_un().sun_path)
+        guard socketPath.utf8.count < sunPathLimit else {
+            throw MCPSocketServerError.socketCreationFailed(ENAMETOOLONG)
+        }
 
         // Create directory with 0700 permissions
         try FileManager.default.createDirectory(
@@ -99,6 +108,29 @@ class MCPSocketServer {
         acceptSource?.resume()
 
         isListening = true
+
+        // Create backward-compatible symlink at the old /tmp/ path so CLI can still find the socket.
+        let username = NSUserName()
+        let legacyDir = "/tmp/claude-mcp-browser-bridge-\(username)"
+        let legacySocketPath = "\(legacyDir)/\(pid).sock"
+        do {
+            try FileManager.default.createDirectory(
+                atPath: legacyDir,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+            // Remove stale sockets/symlinks in the legacy directory
+            if let contents = try? FileManager.default.contentsOfDirectory(atPath: legacyDir) {
+                for file in contents where file.hasSuffix(".sock") {
+                    try? FileManager.default.removeItem(atPath: "\(legacyDir)/\(file)")
+                }
+            }
+            try FileManager.default.createSymbolicLink(atPath: legacySocketPath, withDestinationPath: socketPath)
+            self.legacySymlinkPath = legacySocketPath
+            NSLog("MCPSocketServer: created legacy symlink \(legacySocketPath) -> \(socketPath)")
+        } catch {
+            NSLog("MCPSocketServer: WARNING — could not create legacy symlink at \(legacySocketPath): \(error). CLI must use App Group path.")
+        }
     }
 
     /// Stop the server and clean up.
@@ -125,6 +157,11 @@ class MCPSocketServer {
         }
 
         unlink(socketPath)
+
+        if let legacyPath = legacySymlinkPath {
+            unlink(legacyPath)
+            legacySymlinkPath = nil
+        }
     }
 
     /// Send framed data to a specific client.

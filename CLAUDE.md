@@ -4,7 +4,7 @@
 A macOS Safari Web Extension that replicates the "Claude in Chrome" browser automation extension. It allows Claude Code CLI to control Safari via MCP (Model Context Protocol).
 
 ## Architecture
-- **Native Swift App** (`ClaudeInSafari/`): MCP socket server, screenshot capture, window management, file I/O
+- **Native Swift App** (`ClaudeInSafari/`): MCP socket server, screenshot capture, file I/O
 - **Safari Web Extension** (`ClaudeInSafari Extension/`): Background script, content scripts, tool handlers
 - Communication: CLI → Unix domain socket → Native App → `browser.runtime.sendNativeMessage()` → Extension → Content Scripts → Web Page
 
@@ -19,13 +19,13 @@ A macOS Safari Web Extension that replicates the "Claude in Chrome" browser auto
 ## Key Technical Decisions
 - **MV2 manifest** with `"persistent": true` — MV2 avoids MV3's service-worker lifecycle unpredictability on macOS Safari; `persistent: true` is required on Safari 26+ because the background page never bootstraps with `false` (the event that would wake it never fires, since polling is initiated from the background itself)
 - **ScreenCaptureKit** for screenshots (Safari's `captureVisibleTab` is unreliable)
-- **AppleScript** for window management (Safari's `browser.windows` API is limited)
+- **App Sandbox** enabled for App Store distribution; file access uses security-scoped bookmarks via `FileAccessManager.swift`
 - **Virtual tab groups** via `browser.storage.session` (no `browser.tabGroups` API in Safari)
 - **GCD-based Unix domain socket** for MCP server (NWListener doesn't support UDS)
 - **Newline-delimited JSON** framing (MCP stdio transport) — matches `MessageFramer.swift` and the MCP stdio spec
 
 ## Socket Path Convention
-`/tmp/claude-mcp-browser-bridge-<username>/<pid>.sock` — must match Claude Code CLI expectations
+`<AppGroupContainer>/sockets/<pid>.sock` — socket lives in the App Group container (`group.com.chriscantu.claudeinsafari`) for App Sandbox compatibility; a backward-compatible symlink is created at `/tmp/claude-mcp-browser-bridge-<username>/<pid>.sock`
 
 ## Extension Workflow — Critical Rules
 

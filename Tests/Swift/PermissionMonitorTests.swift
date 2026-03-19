@@ -5,13 +5,9 @@ import XCTest
 // MARK: - Mock
 
 final class MockPermissionChecker: PermissionChecking {
-    var accessibilityGranted = false
     var screenRecordingGranted = false
     var extensionEnabled = false
 
-    var requestAccessibilityCalled = false
-
-    func isAccessibilityGranted() -> Bool { accessibilityGranted }
     func isScreenRecordingGranted() -> Bool { screenRecordingGranted }
     var extensionEnabledSequence: [Bool] = []
 
@@ -22,27 +18,21 @@ final class MockPermissionChecker: PermissionChecking {
             completion(extensionEnabled)
         }
     }
-    func registerAccessibility() {}
-    func requestAccessibility() { requestAccessibilityCalled = true }
     func registerScreenRecording() {}
 }
 
 /// Mock that delivers getExtensionEnabled asynchronously (on a background queue)
 /// to create a window for deallocation testing.
 final class AsyncMockPermissionChecker: PermissionChecking {
-    var accessibilityGranted = false
     var screenRecordingGranted = false
     var extensionEnabled = false
 
-    func isAccessibilityGranted() -> Bool { accessibilityGranted }
     func isScreenRecordingGranted() -> Bool { screenRecordingGranted }
     func getExtensionEnabled(completion: @escaping (Bool) -> Void) {
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.1) { [extensionEnabled] in
             completion(extensionEnabled)
         }
     }
-    func registerAccessibility() {}
-    func requestAccessibility() {}
     func registerScreenRecording() {}
 }
 
@@ -50,10 +40,9 @@ final class AsyncMockPermissionChecker: PermissionChecking {
 
 final class PermissionMonitorTests: XCTestCase {
 
-    // T1 — allGranted returns true when all three are granted
+    // T1 — allGranted returns true when all permissions are granted
     func testAllGranted_whenAllPermissionsGranted() {
         let checker = MockPermissionChecker()
-        checker.accessibilityGranted = true
         checker.screenRecordingGranted = true
         checker.extensionEnabled = true
         let monitor = PermissionMonitor(checker: checker)
@@ -67,10 +56,10 @@ final class PermissionMonitorTests: XCTestCase {
         waitForExpectations(timeout: 1)
     }
 
-    // T2 — allGranted returns false when accessibility is missing
-    func testAllGranted_falseWhenAccessibilityMissing() {
+    // T2 — allGranted returns false when screen recording is missing
+    func testAllGranted_falseWhenScreenRecordingMissing() {
         let checker = MockPermissionChecker()
-        checker.screenRecordingGranted = true
+        checker.screenRecordingGranted = false
         checker.extensionEnabled = true
         let monitor = PermissionMonitor(checker: checker)
 
@@ -78,7 +67,7 @@ final class PermissionMonitorTests: XCTestCase {
         monitor.checkAll { status in
             XCTAssertTrue(Thread.isMainThread, "checkAll must deliver on the main thread")
             XCTAssertFalse(status.allGranted)
-            XCTAssertFalse(status.accessibility)
+            XCTAssertFalse(status.screenRecording)
             exp.fulfill()
         }
         waitForExpectations(timeout: 1)
@@ -104,7 +93,6 @@ final class PermissionMonitorTests: XCTestCase {
         let checker = MockPermissionChecker()
         checker.extensionEnabled = true
         checker.screenRecordingGranted = false
-        checker.accessibilityGranted = true
         let monitor = PermissionMonitor(checker: checker)
 
         let exp = expectation(description: "screenRecording")
@@ -116,29 +104,11 @@ final class PermissionMonitorTests: XCTestCase {
         waitForExpectations(timeout: 1)
     }
 
-    // T5 — firstIncompleteStep returns .accessibility when only accessibility is missing
-    func testFirstIncompleteStep_accessibilityNotGranted() {
-        let checker = MockPermissionChecker()
-        checker.extensionEnabled = true
-        checker.screenRecordingGranted = true
-        checker.accessibilityGranted = false
-        let monitor = PermissionMonitor(checker: checker)
-
-        let exp = expectation(description: "accessibility")
-        monitor.checkAll { status in
-            XCTAssertTrue(Thread.isMainThread, "checkAll must deliver on the main thread")
-            XCTAssertEqual(status.firstIncompleteStep, .accessibility)
-            exp.fulfill()
-        }
-        waitForExpectations(timeout: 1)
-    }
-
-    // T6 — firstIncompleteStep returns nil when all granted
+    // T5 — firstIncompleteStep returns nil when all granted
     func testFirstIncompleteStep_nilWhenAllGranted() {
         let checker = MockPermissionChecker()
         checker.extensionEnabled = true
         checker.screenRecordingGranted = true
-        checker.accessibilityGranted = true
         let monitor = PermissionMonitor(checker: checker)
 
         let exp = expectation(description: "noIncomplete")
@@ -260,7 +230,6 @@ final class PermissionMonitorTests: XCTestCase {
     // D5 — Dealloc mid-check delivers safe default
     func testDebounce_deallocMidCheck_deliversSafeDefault() {
         let asyncChecker = AsyncMockPermissionChecker()
-        asyncChecker.accessibilityGranted = true
         asyncChecker.screenRecordingGranted = true
         asyncChecker.extensionEnabled = true
 
@@ -271,7 +240,6 @@ final class PermissionMonitorTests: XCTestCase {
             // Monitor was deallocated before completion — should get safe default
             XCTAssertFalse(status.extensionEnabled, "Dealloc should deliver false")
             XCTAssertFalse(status.screenRecording, "Dealloc should deliver false")
-            XCTAssertFalse(status.accessibility, "Dealloc should deliver false")
             exp.fulfill()
         }
         // Deallocate before the async completion fires
