@@ -248,8 +248,10 @@ final class MCPSocketServerTests: XCTestCase {
     // MARK: - Stale socket cleanup
 
     func testStart_removesExistingSockFilesFromDirectory() throws {
-        let username = NSUserName()
-        let directory = "/tmp/claude-mcp-browser-bridge-\(username)"
+        guard let socketDirURL = AppConstants.socketDirectoryURL else {
+            throw XCTSkip("App Group container not available")
+        }
+        let directory = socketDirURL.path
 
         // Ensure directory exists
         try FileManager.default.createDirectory(
@@ -273,8 +275,10 @@ final class MCPSocketServerTests: XCTestCase {
     }
 
     func testStart_preservesNonSockFilesInDirectory() throws {
-        let username = NSUserName()
-        let directory = "/tmp/claude-mcp-browser-bridge-\(username)"
+        guard let socketDirURL = AppConstants.socketDirectoryURL else {
+            throw XCTSkip("App Group container not available")
+        }
+        let directory = socketDirURL.path
 
         // Ensure directory exists
         try FileManager.default.createDirectory(

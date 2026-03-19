@@ -13,6 +13,11 @@ enum AppConstants {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupId)
     }
 
+    /// Socket directory for MCP server (inside App Group container for sandbox compatibility).
+    static var socketDirectoryURL: URL? {
+        appGroupContainerURL?.appendingPathComponent("sockets")
+    }
+
     /// URL to the pending tool request FIFO queue file (JSON array of encoded request strings).
     static var pendingRequestsQueueURL: URL? {
         appGroupContainerURL?.appendingPathComponent(UserDefaultsKeys.pendingRequestsFile)
