@@ -5,5 +5,3 @@
 
 // Must match the bundle identifier in ClaudeInSafari.xcodeproj and AppConstants.nativeAppIdentifier.
 const NATIVE_APP_ID = "com.chriscantu.claudeinsafari";
-
-const APP_DISPLAY_NAME = 'Claude in Safari';

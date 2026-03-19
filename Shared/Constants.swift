@@ -41,7 +41,7 @@ enum AppConstants {
     // MARK: - Branding
     static let appDisplayName = "Claude in Safari"
     static let brandColorHex = "#D97757"
-    static let updateURL = URL(string: "https://github.com/anthropics/claude-safari-extension/releases")!
+    static let updateURL = URL(string: "https://github.com/chriscantu/claude-safari-extension/releases")!
 
     /// File names for App Group communication.
     enum UserDefaultsKeys {
