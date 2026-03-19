@@ -742,21 +742,20 @@ class ToolRouter: MCPSocketServerDelegate {
         // Fail early if any path can't be resolved — continuing would produce a confusing
         // "file not found" error from readFiles instead of the real cause.
         var resolvedURLs: [URL] = []
+        defer {
+            for url in resolvedURLs {
+                fileAccessManager.stopAccess(for: url)
+            }
+        }
         for path in paths {
             if let url = fileAccessManager.resolveAccess(for: path) {
                 resolvedURLs.append(url)
             } else {
                 NSLog("readAndForwardFiles: failed to resolve security-scoped access for '%@'", path)
-                // defer handles stopAccess cleanup on all return paths
                 sendError(id: id, code: -32000,
                           message: "File access failed — could not resolve security-scoped access for '\(path)'. Try re-granting folder access.",
                           to: clientId)
                 return
-            }
-        }
-        defer {
-            for url in resolvedURLs {
-                fileAccessManager.stopAccess(for: url)
             }
         }
 

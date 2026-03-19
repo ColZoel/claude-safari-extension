@@ -20,8 +20,6 @@ make status       # Confirm app process + socket are present
 
 **Required system permissions** (System Settings → Privacy & Security):
 - Screen Recording → Claude in Safari ✅
-- Automation → osascript → Safari ✅
-- Accessibility → osascript ✅ *(resize_window only)*
 
 **Safari requirements:**
 - Extension installed and enabled (Preferences → Extensions → Claude in Safari ✅)
@@ -302,21 +300,9 @@ make send TOOL=read_network_requests ARGS='{"tabId":1}'
 
 ---
 
-## 9  Window Resize
+## ~~9  Window Resize~~ (disabled — Spec 026)
 
-```fish
-make send TOOL=resize_window ARGS='{"width":1200,"height":800}'
-```
-
-- [ ] Safari window resizes to approximately 1200×800
-- [ ] Returns "Resized Safari window to 1200×800"
-
-```fish
-make send TOOL=resize_window ARGS='{"width":100,"height":100}'
-```
-
-- [ ] Returns error: "Width must be at least 200 pixels"
-- [ ] Window does not change
+> `resize_window` was removed for App Store compatibility. AppleScriptBridge is preserved for future re-enablement. Skip this section.
 
 ---
 
