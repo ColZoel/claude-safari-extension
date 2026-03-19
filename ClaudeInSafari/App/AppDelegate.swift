@@ -97,11 +97,11 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             self.menuBarController?.setState(MenuBarController.menuBarState(from: status))
             let alert = NSAlert()
             if status.allGranted {
-                alert.messageText = "Claude in Safari is connected"
+                alert.messageText = "\(AppConstants.appDisplayName) is connected"
                 alert.informativeText = "All permissions are granted. Claude Code can use Safari."
                 alert.alertStyle = .informational
             } else {
-                alert.messageText = "Claude in Safari needs attention"
+                alert.messageText = "\(AppConstants.appDisplayName) needs attention"
                 alert.informativeText = "One or more permissions are missing. Use 'Open Setup Again' to fix them."
                 alert.alertStyle = .warning
             }
@@ -194,7 +194,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         } catch {
             NSLog("Failed to start MCP Socket Server: \(error)")
             let alert = NSAlert()
-            alert.messageText = "Claude in Safari: MCP Server Failed to Start"
+            alert.messageText = "\(AppConstants.appDisplayName): MCP Server Failed to Start"
             alert.informativeText = "Could not start the MCP socket server:\n\(error.localizedDescription)\n\nThe extension will not function. Check Console for details."
             alert.alertStyle = .critical
             alert.runModal()

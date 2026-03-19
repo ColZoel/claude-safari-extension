@@ -36,7 +36,7 @@ final class FileAccessManager {
         let directory = (filePath as NSString).deletingLastPathComponent
 
         let panel = NSOpenPanel()
-        panel.message = "Claude in Safari needs access to read files for upload. Please select the folder containing your files."
+        panel.message = "\(AppConstants.appDisplayName) needs access to read files for upload. Please select the folder containing your files."
         panel.prompt = "Grant Access"
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
