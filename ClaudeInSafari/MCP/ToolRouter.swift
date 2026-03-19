@@ -738,13 +738,20 @@ class ToolRouter: MCPSocketServerDelegate {
 
     /// Read files with security-scoped bookmark resolution and forward to extension.
     private func readAndForwardFiles(paths: [String], arguments: [String: Any], id: Any?, clientId: String) {
-        // Resolve security-scoped access for sandboxed file reads
+        // Resolve security-scoped access for sandboxed file reads.
+        // Fail early if any path can't be resolved — continuing would produce a confusing
+        // "file not found" error from readFiles instead of the real cause.
         var resolvedURLs: [URL] = []
         for path in paths {
             if let url = fileAccessManager.resolveAccess(for: path) {
                 resolvedURLs.append(url)
             } else {
                 NSLog("readAndForwardFiles: failed to resolve security-scoped access for '%@'", path)
+                for url in resolvedURLs { fileAccessManager.stopAccess(for: url) }
+                sendError(id: id, code: -32000,
+                          message: "File access failed — could not resolve security-scoped access for '\(path)'. Try re-granting folder access.",
+                          to: clientId)
+                return
             }
         }
         defer {
