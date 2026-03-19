@@ -276,52 +276,24 @@ final class OnboardingWindowController: NSWindowController {
     }
 
     @objc private func openSafariSettings() {
-        // safari-settings:// and SFSafariApplication.showPreferencesForExtension both fail on macOS 26+.
-        // Use AppleScript (via osascript subprocess, same pattern as AppleScriptBridge) to activate
-        // Safari and navigate to Settings → Extensions. Falls back to opening Safari.app on error.
-        let script = """
-            tell application "Safari" to activate
-            delay 0.3
-            tell application "System Events"
-                tell process "Safari"
-                    try
-                        click menu item "Settings\u{2026}" of menu "Safari" of menu bar 1
-                    on error
-                        click menu item "Preferences\u{2026}" of menu "Safari" of menu bar 1
-                    end try
-                    delay 0.4
-                    tell window 1
-                        click button "Extensions" of tool bar 1
-                    end tell
-                end tell
-            end tell
-            """
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/osascript")
-            process.arguments = ["-e", script]
-            let stderrPipe = Pipe()
-            process.standardError = stderrPipe
-            do {
-                try process.run()
-                process.waitUntilExit()
-                if process.terminationStatus != 0 {
-                    let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-                    let stderrStr = String(data: stderrData, encoding: .utf8) ?? "<unreadable>"
-                    NSLog("OnboardingWindowController: osascript exited %d — stderr: %@ — falling back to Safari.app",
-                          process.terminationStatus, stderrStr)
-                    DispatchQueue.main.async { [weak self] in self?.openSafariFallback() }
+        // Try SFSafariApplication.showPreferencesForExtension first — opens Safari Settings
+        // directly to the Extensions pane. Falls back to opening Safari.app if it fails.
+        //
+        // History: this API was broken in early macOS 26 betas (SFErrorDomain error 4), so an
+        // AppleScript/osascript workaround was used instead. That workaround was removed because
+        // it requires Automation permission for System Events, which triggers a TCC dialog on
+        // every launch under App Sandbox. showPreferencesForExtension works on macOS 26.3+;
+        // on older versions that still have the bug, the fallback opens Safari.app directly.
+        let extensionBundleID = "com.chriscantu.claudeinsafari.extension"
+        SFSafariApplication.showPreferencesForExtension(withIdentifier: extensionBundleID) { error in
+            if let error = error {
+                NSLog("OnboardingWindowController: showPreferencesForExtension failed: %@ — falling back to Safari.app", error.localizedDescription)
+                DispatchQueue.main.async {
+                    if !NSWorkspace.shared.open(URL(fileURLWithPath: "/Applications/Safari.app")) {
+                        NSLog("OnboardingWindowController: Safari.app fallback also failed")
+                    }
                 }
-            } catch {
-                NSLog("OnboardingWindowController: failed to launch osascript: %@ — falling back", error.localizedDescription)
-                DispatchQueue.main.async { [weak self] in self?.openSafariFallback() }
             }
-        }
-    }
-
-    private func openSafariFallback() {
-        if !NSWorkspace.shared.open(URL(fileURLWithPath: "/Applications/Safari.app")) {
-            NSLog("OnboardingWindowController: Safari.app fallback also failed")
         }
     }
 

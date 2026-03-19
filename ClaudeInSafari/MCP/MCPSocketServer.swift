@@ -25,7 +25,6 @@ class MCPSocketServer {
 
     private(set) var socketPath: String = ""
     private(set) var isListening: Bool = false
-    private var legacySymlinkPath: String?
 
     init(framer: MessageFramer) {
         self.framer = framer
@@ -109,28 +108,9 @@ class MCPSocketServer {
 
         isListening = true
 
-        // Create backward-compatible symlink at the old /tmp/ path so CLI can still find the socket.
-        let username = NSUserName()
-        let legacyDir = "/tmp/claude-mcp-browser-bridge-\(username)"
-        let legacySocketPath = "\(legacyDir)/\(pid).sock"
-        do {
-            try FileManager.default.createDirectory(
-                atPath: legacyDir,
-                withIntermediateDirectories: true,
-                attributes: [.posixPermissions: 0o700]
-            )
-            // Remove stale sockets/symlinks in the legacy directory
-            if let contents = try? FileManager.default.contentsOfDirectory(atPath: legacyDir) {
-                for file in contents where file.hasSuffix(".sock") {
-                    try? FileManager.default.removeItem(atPath: "\(legacyDir)/\(file)")
-                }
-            }
-            try FileManager.default.createSymbolicLink(atPath: legacySocketPath, withDestinationPath: socketPath)
-            self.legacySymlinkPath = legacySocketPath
-            NSLog("MCPSocketServer: created legacy symlink \(legacySocketPath) -> \(socketPath)")
-        } catch {
-            NSLog("MCPSocketServer: WARNING — could not create legacy symlink at \(legacySocketPath): \(error). CLI must use App Group path.")
-        }
+        // Legacy /tmp/ symlink is handled by the Makefile `run` target (outside the sandbox).
+        // The app no longer creates it directly — under App Sandbox, writing to /tmp triggers
+        // a powerbox dialog on every launch.
     }
 
     /// Stop the server and clean up.
@@ -157,11 +137,6 @@ class MCPSocketServer {
         }
 
         unlink(socketPath)
-
-        if let legacyPath = legacySymlinkPath {
-            unlink(legacyPath)
-            legacySymlinkPath = nil
-        }
     }
 
     /// Send framed data to a specific client.

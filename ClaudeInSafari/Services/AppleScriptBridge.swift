@@ -3,6 +3,11 @@ import Foundation
 /// Manages Safari window operations via AppleScript.
 /// See Spec 016 for full specification.
 ///
+/// NOTE: This class is intentionally preserved but currently has no callers.
+/// The resize_window tool was disabled for App Store compatibility (Spec 026 §1).
+/// AppleScriptBridge and its tests are kept for future re-enablement when Safari
+/// adds browser.windows.update() or a similar non-AppleScript resize API.
+///
 /// Apple Events are sent via an `osascript` subprocess rather than `NSAppleScript`.
 /// See `runAppleScript()` for the rationale — the entitlement applies to `osascript`'s
 /// TCC entry, not the app bundle.

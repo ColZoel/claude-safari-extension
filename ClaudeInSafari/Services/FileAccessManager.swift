@@ -105,11 +105,16 @@ final class FileAccessManager {
     // MARK: - Private
 
     private func findBookmarkDirectory(for path: String) -> String? {
+        // Resolve symlinks so /tmp/file.txt and /private/tmp/file.txt match the same bookmark.
+        // On macOS, /tmp is a symlink to /private/tmp — NSOpenPanel returns the resolved path
+        // but tool call arguments use the unresolved path.
+        let resolvedPath = (path as NSString).resolvingSymlinksInPath
         for key in defaults.dictionaryRepresentation().keys {
             guard key.hasPrefix(Self.bookmarkKeyPrefix) else { continue }
             let dir = String(key.dropFirst(Self.bookmarkKeyPrefix.count))
-            let normalizedDir = dir.hasSuffix("/") ? dir : dir + "/"
-            if path.hasPrefix(normalizedDir) || path == dir { return dir }
+            let resolvedDir = (dir as NSString).resolvingSymlinksInPath
+            let normalizedDir = resolvedDir.hasSuffix("/") ? resolvedDir : resolvedDir + "/"
+            if resolvedPath.hasPrefix(normalizedDir) || resolvedPath == resolvedDir { return dir }
         }
         return nil
     }

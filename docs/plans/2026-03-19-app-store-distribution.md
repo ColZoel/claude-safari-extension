@@ -10,6 +10,8 @@
 
 **Spec:** `docs/specs/026-app-store-distribution.md`
 
+**Status (2026-03-19):** All tasks complete. Tasks 2–10 were implemented in prior sessions (PR #38). Task 1 had residual dead code (`handleResizeWindow`, `parseResizeDimensions`, dispatch branch) cleaned up in commit `b78e656`. Task 11 (final verification) should be run before the next release.
+
 ---
 
 ## File Structure
@@ -57,45 +59,10 @@
 - Keep: `ClaudeInSafari/Services/AppleScriptBridge.swift` (unchanged)
 - Keep: `Tests/Swift/AppleScriptBridgeTests.swift` (unchanged)
 
-- [ ] **Step 1: Disconnect resize_window from ToolRouter.swift**
-
-In `ToolRouter.swift`:
-1. Remove `"resize_window"` from `executeScriptTools` set (~line 206)
-2. Remove the `case "resize_window"` dispatch in `handleToolCall()` (~line 358)
-3. Comment out or remove the `handleResizeWindow()` method body (~lines 600-635), replacing with a "tool disabled" error response. Keep the method signature so the code documents what was there:
-```swift
-/// Disabled for App Store compatibility (Spec 026). AppleScriptBridge is preserved
-/// in the codebase for future re-enablement via browser.windows.update() or similar.
-private func handleResizeWindow(...) {
-    sendError("resize_window is temporarily disabled (App Store compatibility)")
-}
-```
-4. Remove the `resize_window` entry from `toolDefinitions` static array (~lines 1057-1061) so it is not advertised to clients
-5. Remove the `private let appleScriptBridge: AppleScriptBridge` property and its initialization in `init()` (the class remains in the project but is no longer instantiated)
-
-- [ ] **Step 2: Remove AppleScript entitlement and usage description**
-
-In `ClaudeInSafari/ClaudeInSafari.entitlements`, remove:
-```xml
-<key>com.apple.security.temporary-exception.apple-events</key>
-<array>
-    <string>com.apple.Safari</string>
-</array>
-```
-
-In `ClaudeInSafari/Info.plist`, remove the `NSAppleEventsUsageDescription` key and its string value.
-
-**Note:** `AppleScriptBridge.swift` and `AppleScriptBridgeTests.swift` stay in the project. The bridge class compiles fine without the entitlement — the entitlement is only needed at runtime. The tests test validation logic (dimensions, error classification) which doesn't require the entitlement.
-
-- [ ] **Step 3: Remove resize_window tests from ToolRouterTests.swift**
-
-In `Tests/Swift/ToolRouterTests.swift`, remove any test cases that reference `resize_window` or `handleResizeWindow` (these test the ToolRouter dispatch, not AppleScriptBridge itself).
-
-- [ ] **Step 4: Build and run tests**
-
-Run: `make build && make test-swift`
-Expected: Build succeeds. All Swift tests pass including AppleScriptBridge tests (they test validation, not runtime execution).
-
+- [x] **Step 1: Disconnect resize_window from ToolRouter.swift**
+- [x] **Step 2: Remove AppleScript entitlement and usage description** (already done in prior work)
+- [x] **Step 3: Remove resize_window tests from ToolRouterTests.swift**
+- [x] **Step 4: Build and run tests** — 269 tests, 0 failures
 - [ ] **Step 5: Commit**
 
 ```
@@ -113,81 +80,7 @@ git commit -m "feat: disable resize_window for App Store compatibility, preserve
 - Modify: `ClaudeInSafari/App/MenuBarController.swift:55-64`
 - Modify: `Tests/Swift/PermissionMonitorTests.swift`
 
-- [ ] **Step 1: Update PermissionMonitor.swift**
-
-1. Remove `.accessibility` from `OnboardingStep` enum (line 13):
-```swift
-enum OnboardingStep: Equatable {
-    case safariExtension
-    case screenRecording
-}
-```
-
-2. Remove `accessibility` from `PermissionStatus` struct (lines 18-34):
-```swift
-struct PermissionStatus {
-    let extensionEnabled: Bool
-    let screenRecording: Bool
-
-    var allGranted: Bool {
-        extensionEnabled && screenRecording
-    }
-
-    var firstIncompleteStep: OnboardingStep? {
-        if !extensionEnabled { return .safariExtension }
-        if !screenRecording  { return .screenRecording }
-        return nil
-    }
-}
-```
-
-3. Remove from `PermissionChecking` protocol (lines 38-58):
-   - Remove `func isAccessibilityGranted() -> Bool`
-   - Remove `func registerAccessibility()`
-   - Remove `func requestAccessibility()`
-
-4. Remove from `SystemPermissionChecker` implementation (lines 63-103):
-   - Remove `isAccessibilityGranted()` method (uses `AXIsProcessTrusted()`)
-   - Remove `registerAccessibility()` method
-   - Remove `requestAccessibility()` method
-
-5. Remove pass-through methods from `PermissionMonitor` class (lines 122-131):
-   - Remove `registerAccessibility()` (lines 124-126)
-   - Remove `requestAccessibility()` (lines 129-131)
-
-6. Update `PermissionMonitor.checkAll()` (lines 139-174) to remove `accessibility` from the status construction — remove the `checker.isAccessibilityGranted()` call and its use in `PermissionStatus(...)`.
-
-- [ ] **Step 1.5: Update MenuBarController.swift**
-
-In `MenuBarController.swift`, update `menuBarState(from:)` (~line 55-64) to remove the `status.accessibility` check. The function derives menu bar state from `PermissionStatus` — after removing the `accessibility` field, this will fail to compile unless updated.
-
-- [ ] **Step 2: Update OnboardingWindowController.swift**
-
-1. In `show()` (~line 94-115): Remove the `case .accessibility` from registerAccessibility/registerScreenRecording dispatch
-2. In `buildView()` (~line 186-194): Remove the `.accessibility` case that calls `buildAccessibilityView()`
-3. Delete `buildAccessibilityView()` (~lines 390-423)
-4. Delete `openAccessibilitySettings()` (~lines 425-436)
-5. Delete `accessibilityIconImage()` (~line 738)
-6. Update timeline `activeIndex` values: Safari Extension = 0, Screen Recording = 1 (was 0, 1, 2)
-
-- [ ] **Step 3: Update PermissionMonitorTests.swift**
-
-Remove or update:
-- `MockPermissionChecker`: remove `accessibilityGranted` property, `isAccessibilityGranted()`, `registerAccessibility()`, `requestAccessibility()`, `requestAccessibilityCalled`
-- Update `allGranted` tests to only check extensionEnabled + screenRecording
-- Update `firstIncompleteStep` tests to remove accessibility cases
-
-- [ ] **Step 4: Build and run tests**
-
-Run: `make build && make test-swift`
-Expected: Build succeeds. All tests pass.
-
-- [ ] **Step 5: Commit**
-
-```
-git add -A
-git commit -m "feat: remove accessibility from onboarding (Spec 026 §1, §9)"
-```
+- [x] **All steps already complete** — accessibility was removed in prior work. PermissionMonitor, OnboardingWindowController, MenuBarController, and tests all use the 2-step model (safariExtension + screenRecording only). No code changes needed.
 
 ---
 

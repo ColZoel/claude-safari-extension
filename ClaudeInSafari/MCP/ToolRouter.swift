@@ -363,8 +363,6 @@ class ToolRouter: MCPSocketServerDelegate {
             handleUploadImage(arguments: arguments, id: id, clientId: clientId)
         } else if toolName == "file_upload" {
             handleFileUpload(arguments: arguments, id: id, clientId: clientId)
-        } else if toolName == "resize_window" {
-            handleResizeWindow(arguments: arguments, id: id, clientId: clientId)
         } else if nativeTools.contains(toolName) {
             sendError(id: id, code: -32000, message: "Native tool '\(toolName)' not yet implemented", to: clientId)
         } else {
@@ -597,14 +595,6 @@ class ToolRouter: MCPSocketServerDelegate {
         }
     }
 
-    // MARK: - Native Window Resize
-
-    /// Disabled for App Store compatibility (Spec 026). AppleScriptBridge is preserved
-    /// in the codebase for future re-enablement via browser.windows.update() or similar.
-    private func handleResizeWindow(arguments: [String: Any], id: Any?, clientId: String) {
-        sendError(id: id, code: -32000, message: "resize_window is temporarily disabled (App Store compatibility)", to: clientId)
-    }
-
     /// Parses a zoom region from tool arguments.
     /// Expects `region` key containing a 4-element array of integers [x, y, width, height].
     /// Tolerates JSON numbers arriving as Double or NSNumber (common via native bridge).
@@ -624,24 +614,6 @@ class ToolRouter: MCPSocketServerDelegate {
             if converted.count == 4 { return (converted[0], converted[1], converted[2], converted[3]) }
         }
         return nil
-    }
-
-    /// Parse width and height from tool arguments, tolerating Int, Double, or NSNumber.
-    /// Returns nil if either argument is missing or cannot be converted to a Double.
-    /// Separated from handleResizeWindow for testability.
-    func parseResizeDimensions(_ arguments: [String: Any]) -> (width: Double, height: Double)? {
-        // Tolerate Int, Double, or NSNumber — same pattern used for zoom region parsing.
-        func asDouble(_ val: Any) -> Double? {
-            if let i = val as? Int { return Double(i) }
-            if let d = val as? Double { return d }
-            if let n = val as? NSNumber { return n.doubleValue }
-            return nil
-        }
-        guard let wRaw = arguments["width"], let hRaw = arguments["height"],
-              let w = asDouble(wRaw), let h = asDouble(hRaw) else {
-            return nil
-        }
-        return (w, h)
     }
 
     /// Parse a coordinate value from tool arguments, tolerating Int, Double, or NSNumber.
@@ -738,8 +710,18 @@ class ToolRouter: MCPSocketServerDelegate {
         let needsPrompt = paths.contains { fileAccessManager.needsAccessPrompt(for: $0) }
         if needsPrompt {
             DispatchQueue.main.async { [self] in
-                // Loop until all paths are covered — each grant may cover multiple files
+                // Loop until all paths are covered — each grant may cover multiple files.
+                // Safety limit prevents infinite loop if path normalization causes a mismatch.
+                var attempts = 0
                 while let ungrantedPath = paths.first(where: { self.fileAccessManager.needsAccessPrompt(for: $0) }) {
+                    attempts += 1
+                    if attempts > paths.count + 1 {
+                        NSLog("handleFileUpload: safety limit hit — %d prompts for %d paths", attempts, paths.count)
+                        self.sendError(id: id, code: -32000,
+                                       message: "File access could not be granted — the selected folder may not cover the requested files",
+                                       to: clientId)
+                        return
+                    }
                     guard self.fileAccessManager.requestAccess(for: ungrantedPath) else {
                         self.sendError(id: id, code: -32000,
                                        message: "File access denied — user cancelled the folder access prompt",
@@ -756,18 +738,24 @@ class ToolRouter: MCPSocketServerDelegate {
 
     /// Read files with security-scoped bookmark resolution and forward to extension.
     private func readAndForwardFiles(paths: [String], arguments: [String: Any], id: Any?, clientId: String) {
-        // Resolve security-scoped access for sandboxed file reads
+        // Resolve security-scoped access for sandboxed file reads.
+        // Fail early if any path can't be resolved — continuing would produce a confusing
+        // "file not found" error from readFiles instead of the real cause.
         var resolvedURLs: [URL] = []
+        defer {
+            for url in resolvedURLs {
+                fileAccessManager.stopAccess(for: url)
+            }
+        }
         for path in paths {
             if let url = fileAccessManager.resolveAccess(for: path) {
                 resolvedURLs.append(url)
             } else {
                 NSLog("readAndForwardFiles: failed to resolve security-scoped access for '%@'", path)
-            }
-        }
-        defer {
-            for url in resolvedURLs {
-                fileAccessManager.stopAccess(for: url)
+                sendError(id: id, code: -32000,
+                          message: "File access failed — could not resolve security-scoped access for '\(path)'. Try re-granting folder access.",
+                          to: clientId)
+                return
             }
         }
 
