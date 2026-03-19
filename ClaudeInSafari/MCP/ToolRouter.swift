@@ -758,6 +758,8 @@ class ToolRouter: MCPSocketServerDelegate {
         for path in paths {
             if let url = fileAccessManager.resolveAccess(for: path) {
                 resolvedURLs.append(url)
+            } else {
+                NSLog("readAndForwardFiles: failed to resolve security-scoped access for '%@'", path)
             }
         }
         defer {

@@ -25,7 +25,7 @@ A macOS Safari Web Extension that replicates the "Claude in Chrome" browser auto
 - **Newline-delimited JSON** framing (MCP stdio transport) — matches `MessageFramer.swift` and the MCP stdio spec
 
 ## Socket Path Convention
-`<AppGroupContainer>/claude-mcp-browser-bridge/<pid>.sock` — socket lives in the App Group container (`group.com.anthropic.claude-in-safari`) for App Sandbox compatibility; must match Claude Code CLI expectations
+`<AppGroupContainer>/sockets/<pid>.sock` — socket lives in the App Group container (`group.com.chriscantu.claudeinsafari`) for App Sandbox compatibility; a backward-compatible symlink is created at `/tmp/claude-mcp-browser-bridge-<username>/<pid>.sock`
 
 ## Extension Workflow — Critical Rules
 

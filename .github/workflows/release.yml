@@ -77,8 +77,18 @@ jobs:
         if: env.APPLE_CERTIFICATE != ''
         run: |
           APP_PATH=$(find build/DerivedData -name "ClaudeInSafari.app" -maxdepth 6 | head -1)
-          codesign --force --deep --options runtime \
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::Could not find ClaudeInSafari.app in build output"
+            exit 1
+          fi
+          # Sign from inside out: extension first, then app (Apple requires this for bundles with extensions)
+          codesign --force --options runtime \
             --sign "Developer ID Application" \
+            --entitlements "ClaudeInSafari Extension/ClaudeInSafariExtension.entitlements" \
+            "$APP_PATH/Contents/PlugIns/ClaudeInSafari Extension.appex"
+          codesign --force --options runtime \
+            --sign "Developer ID Application" \
+            --entitlements "ClaudeInSafari/ClaudeInSafari.entitlements" \
             "$APP_PATH"
           echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
 
@@ -86,6 +96,10 @@ jobs:
         if: env.APPLE_CERTIFICATE == ''
         run: |
           APP_PATH=$(find build/DerivedData -name "ClaudeInSafari.app" -maxdepth 6 | head -1)
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::Could not find ClaudeInSafari.app in build output"
+            exit 1
+          fi
           echo "APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
 
       # ── Notarization ───────────────────────────────────────────────────────
@@ -112,6 +126,10 @@ jobs:
           scripts/create-dmg.sh "$APP_PATH"
           # create-dmg.sh is expected to produce ClaudeInSafari.dmg
           DMG_PATH=$(find . -maxdepth 2 -name "*.dmg" | head -1)
+          if [ -z "$DMG_PATH" ]; then
+            echo "::error::create-dmg.sh did not produce a .dmg file"
+            exit 1
+          fi
           echo "DMG_PATH=$DMG_PATH" >> "$GITHUB_ENV"
 
       - name: Notarize DMG

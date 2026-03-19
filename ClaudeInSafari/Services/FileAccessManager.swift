@@ -3,7 +3,7 @@ import Foundation
 import AppKit
 
 /// Manages security-scoped bookmarks for sandbox-compatible file access.
-/// On first file_upload, presents NSOpenPanel for directory access grant.
+/// Presents NSOpenPanel when directory access has not yet been granted.
 /// Stores bookmarks in UserDefaults for persistence across launches.
 final class FileAccessManager {
 
@@ -30,7 +30,7 @@ final class FileAccessManager {
     }
 
     /// Present NSOpenPanel to grant access to a directory containing the file.
-    /// Returns true if user granted access, false if cancelled.
+    /// Returns true if user granted access, false if cancelled or bookmark creation failed.
     @MainActor
     func requestAccess(for filePath: String) -> Bool {
         let directory = (filePath as NSString).deletingLastPathComponent
@@ -56,12 +56,14 @@ final class FileAccessManager {
             storeBookmark(bookmark, for: url.path)
             return true
         } catch {
+            NSLog("FileAccessManager: failed to create bookmark for %@: %@", url.path, error.localizedDescription)
             return false
         }
     }
 
     /// Resolve bookmark and start accessing the security-scoped resource.
-    /// Returns the resolved URL, or nil if resolution fails.
+    /// Returns the resolved directory URL, or nil if resolution fails.
+    /// On success, the caller MUST call `stopAccess(for:)` when done to release the resource.
     func resolveAccess(for path: String) -> URL? {
         guard let directory = findBookmarkDirectory(for: path) else { return nil }
         guard let bookmarkData = defaults.data(forKey: Self.bookmarkKeyPrefix + directory) else { return nil }
@@ -76,14 +78,21 @@ final class FileAccessManager {
             )
 
             if isStale {
-                if let newData = try? url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil) {
+                do {
+                    let newData = try url.bookmarkData(options: .withSecurityScope, includingResourceValuesForKeys: nil, relativeTo: nil)
                     storeBookmark(newData, for: directory)
+                } catch {
+                    NSLog("FileAccessManager: stale bookmark for '%@' could not be refreshed: %@", directory, error.localizedDescription)
                 }
             }
 
-            guard url.startAccessingSecurityScopedResource() else { return nil }
+            guard url.startAccessingSecurityScopedResource() else {
+                NSLog("FileAccessManager: startAccessingSecurityScopedResource() returned false for '%@' (directory: '%@')", path, directory)
+                return nil
+            }
             return url
         } catch {
+            NSLog("FileAccessManager: failed to resolve bookmark for directory '%@': %@", directory, error.localizedDescription)
             return nil
         }
     }
