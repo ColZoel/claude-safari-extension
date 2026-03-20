@@ -52,6 +52,20 @@ Safari Web Extension  (background page · content scripts · tool handlers)
 Web Pages
 ```
 
+## Setup
+
+1. Install the DMG or download from the Mac App Store
+2. Launch Claude in Safari and complete the onboarding steps
+3. When prompted, install the Claude integration:
+   - **DMG**: Click "Install" — automatic
+   - **App Store**: Click "Install", paste in Terminal, press Enter
+4. Restart Claude Code or Claude Desktop
+
+Manual install (if needed):
+```bash
+"/Applications/Claude in Safari.app/Contents/MacOS/safari-mcp-bridge" --install --verify
+```
+
 ## Building from Source
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for full development setup, testing, and contribution guidelines.

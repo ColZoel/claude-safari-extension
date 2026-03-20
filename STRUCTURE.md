@@ -78,6 +78,12 @@ claude-safari-extension/
 │   ├── Shared/                              # Code shared between app and extension targets
 │   │   └── Constants.swift                  # App group ID, notification names, shared keys
 │   │
+│   ├── safari-mcp-bridge/                  # CLI Bridge Target (embedded in app bundle)
+│   │   ├── main.swift                     # Entry point: argument parsing, mode dispatch
+│   │   ├── BridgeRelay.swift              # Socket discovery + stdin↔socket relay
+│   │   ├── ConfigInstaller.swift          # MCP config read/merge/write for Claude Code + Desktop
+│   │   └── StatusReporter.swift           # --status diagnostic output
+│   │
 │   └── Tests/                               # All test files
 │       ├── Swift/                            # XCTest suites for native app
 │       │   ├── AppDelegateTests.swift
