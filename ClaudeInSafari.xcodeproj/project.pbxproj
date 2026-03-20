@@ -37,7 +37,6 @@
 		AE7A3B63E56420BC88227115 /* ScreenshotService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5736A5C7E56CF23B6FF9B13A /* ScreenshotService.swift */; };
 		B04AE25841439136219583A5 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = B36043F3C22F5C5108491897 /* main.swift */; };
 		B0B3DAD82B9C21C2DF890362 /* AppleScriptBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02B361326E8F2C467CF43011 /* AppleScriptBridge.swift */; };
-		B4401982F73634B2F6BC5EB7 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D372117A4FF27A236BD5F8 /* Constants.swift */; };
 		B9C04D834A40C22DE8146BBD /* MCPSocketServerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 439B4BEE06832D8A14D92084 /* MCPSocketServerTests.swift */; };
 		C5C31B08E3295067213DE349 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D372117A4FF27A236BD5F8 /* Constants.swift */; };
 		C6D7E8F9A0B1C2D3E4F5A6B7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E7F8A9B0C1D2E3F4A5B6C7D8 /* Assets.xcassets */; };
@@ -540,7 +539,6 @@
 				178CDADAE3624CE23D341758 /* BridgeRelay.swift in Sources */,
 				D8E4417585510407A78489A5 /* ConfigInstaller.swift in Sources */,
 				4D2E17B40AE0230AD251FC06 /* StatusReporter.swift in Sources */,
-				B4401982F73634B2F6BC5EB7 /* Constants.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

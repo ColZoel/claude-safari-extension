@@ -127,7 +127,7 @@ enum ConfigInstaller {
     /// (same rationale as BridgeRelay.socketDirectory).
     static var defaultMarkerPath: String {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
-        return "\(home)/Library/Group Containers/\(AppConstants.appGroupId)/mcp_config_installed.json"
+        return "\(home)/Library/Group Containers/\(bridgeAppGroupId)/mcp_config_installed.json"
     }
 
     /// Writes a marker file so the main app can detect successful installation.

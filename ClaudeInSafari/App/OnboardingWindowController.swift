@@ -451,7 +451,8 @@ final class OnboardingWindowController: NSWindowController {
     @objc private func skipConnect() { advance() }
 
     /// Maximum time (seconds) to wait for the marker file before showing a timeout message.
-    private static let markerPollingTimeout: TimeInterval = 120
+    /// 30s matches the navigation-settlement timeout used elsewhere in the extension.
+    private static let markerPollingTimeout: TimeInterval = 30
 
     private var markerPollingStart: Date?
 

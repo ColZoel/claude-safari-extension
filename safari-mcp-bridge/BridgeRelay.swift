@@ -1,7 +1,11 @@
 // safari-mcp-bridge/BridgeRelay.swift
 import Foundation
 
-/// Discovers the MCP socket and relays stdin<->socket using newline-delimited JSON.
+/// App Group ID — owned by the bridge target to avoid coupling to the main app's Constants.swift.
+/// Must match AppConstants.appGroupId in Shared/Constants.swift.
+let bridgeAppGroupId = "group.com.chriscantu.claudeinsafari"
+
+/// Discovers the MCP socket and relays stdin↔socket using newline-delimited JSON.
 enum BridgeRelay {
 
     /// App Group container socket directory path.
@@ -10,7 +14,7 @@ enum BridgeRelay {
     /// has no entitlements (it runs unsandboxed as a subprocess of Claude Code/Desktop).
     static let socketDirectory: String = {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
-        return "\(home)/Library/Group Containers/\(AppConstants.appGroupId)/sockets"
+        return "\(home)/Library/Group Containers/\(bridgeAppGroupId)/sockets"
     }()
 
     /// Finds the newest *.sock file in the given directory by modification time.
@@ -82,9 +86,8 @@ enum BridgeRelay {
         setbuf(stdout, nil) // MCP requires unbuffered output
 
         let group = DispatchGroup()
-        // Separate flags per direction to avoid data race (each written by only one queue)
-        var stdinRelayError = false
-        var stdoutRelayError = false
+        let errorLock = NSLock()
+        var hadError = false
 
         // stdin → socket
         group.enter()
@@ -100,7 +103,9 @@ enum BridgeRelay {
                     let w = Darwin.write(fd, buf.advanced(by: written), n - written)
                     if w <= 0 {
                         fputs("Bridge: write to socket failed: \(String(cString: strerror(errno)))\n", stderr)
-                        stdinRelayError = true
+                        errorLock.lock()
+                        hadError = true
+                        errorLock.unlock()
                         shutdown(fd, SHUT_WR) // unblock socket→stdout read
                         group.leave()
                         return
@@ -126,7 +131,9 @@ enum BridgeRelay {
                     let w = fwrite(buf.advanced(by: written), 1, n - written, stdout)
                     if w <= 0 {
                         fputs("Bridge: write to stdout failed: \(String(cString: strerror(errno)))\n", stderr)
-                        stdoutRelayError = true
+                        errorLock.lock()
+                        hadError = true
+                        errorLock.unlock()
                         group.leave()
                         return
                     }
@@ -139,11 +146,14 @@ enum BridgeRelay {
 
         group.wait()
         close(fd)
-        exit((stdinRelayError || stdoutRelayError) ? 1 : 0)
+        errorLock.lock()
+        let exitCode: Int32 = hadError ? 1 : 0
+        errorLock.unlock()
+        exit(exitCode)
     }
 
     /// Performs a full MCP handshake (initialize + tools/list) and returns the tool count.
-    /// Returns nil on failure. Used by --install --verify.
+    /// Uses a 5-second socket read timeout. Returns nil on any failure. Used by --install --verify.
     static func verifyConnection(socketPath: String) -> Int? {
         guard let fd = try? connectToSocket(at: socketPath) else { return nil }
         defer { close(fd) }
@@ -151,36 +161,48 @@ enum BridgeRelay {
         var tv = timeval(tv_sec: 5, tv_usec: 0)
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
 
-        func sendLine(_ json: String) {
+        // Shared read buffer — carries leftover bytes across calls in case the server
+        // delivers multiple newline-delimited messages in one TCP segment.
+        var leftover = Data()
+
+        func sendLine(_ json: String) -> Bool {
             let data = (json + "\n").data(using: .utf8)!
-            data.withUnsafeBytes { ptr in
-                guard let base = ptr.baseAddress else { return }
-                _ = Darwin.write(fd, base, data.count)
+            return data.withUnsafeBytes { ptr -> Bool in
+                guard let base = ptr.baseAddress else { return false }
+                let w = Darwin.write(fd, base, data.count)
+                return w == data.count
             }
         }
 
         func readNextLine() -> [String: Any]? {
-            var buffer = Data()
+            // Check leftover first
+            if let idx = leftover.firstIndex(of: 0x0A) {
+                let msgData = leftover[leftover.startIndex..<idx]
+                leftover = Data(leftover[(idx + 1)...])
+                return try? JSONSerialization.jsonObject(with: msgData) as? [String: Any]
+            }
+
             let buf = UnsafeMutablePointer<UInt8>.allocate(capacity: 65536)
             defer { buf.deallocate() }
             while true {
                 let n = Darwin.read(fd, buf, 65536)
                 if n <= 0 { return nil }
-                buffer.append(buf, count: n)
-                if let idx = buffer.firstIndex(of: 0x0A) {
-                    let msgData = buffer[buffer.startIndex..<idx]
+                leftover.append(buf, count: n)
+                if let idx = leftover.firstIndex(of: 0x0A) {
+                    let msgData = leftover[leftover.startIndex..<idx]
+                    leftover = Data(leftover[(idx + 1)...])
                     return try? JSONSerialization.jsonObject(with: msgData) as? [String: Any]
                 }
             }
         }
 
-        sendLine("{\"jsonrpc\":\"2.0\",\"id\":0,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},\"clientInfo\":{\"name\":\"safari-mcp-bridge\",\"version\":\"1.0.0\"}}}")
+        guard sendLine("{\"jsonrpc\":\"2.0\",\"id\":0,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{},\"clientInfo\":{\"name\":\"safari-mcp-bridge\",\"version\":\"1.0.0\"}}}") else { return nil }
         guard readNextLine() != nil else { return nil }
 
-        sendLine("{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}")
+        guard sendLine("{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}") else { return nil }
         usleep(50_000)
 
-        sendLine("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{}}")
+        guard sendLine("{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\",\"params\":{}}") else { return nil }
         guard let response = readNextLine(),
               let result = response["result"] as? [String: Any],
               let tools = result["tools"] as? [[String: Any]] else { return nil }

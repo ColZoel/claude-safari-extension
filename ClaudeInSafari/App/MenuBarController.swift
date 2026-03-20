@@ -148,6 +148,9 @@ final class MenuBarController {
         case .connected:
             menu.addItem(makeItem("Open Setup Again", action: #selector(openSetup), symbol: "⚙️"))
             menu.addItem(makeItem("Open Safari", action: #selector(openSafari), symbol: "🧭"))
+            // MCP bridge install is only shown when the extension is healthy (.connected).
+            // In .notConnected/.needsAttention states, the user should fix the extension first
+            // via "Open Setup" / "Fix This" — the bridge is useless without a working extension.
             menu.addItem(.separator())
             menu.addItem(makeItem("Install Claude Integration", action: #selector(installIntegration), symbol: "🔗"))
             menu.addItem(makeItem("Uninstall Claude Integration", action: #selector(uninstallIntegration), symbol: nil))
