@@ -153,9 +153,9 @@ jobs:
 
           xcrun stapler staple "$DMG_PATH"
 
-      # ── App Store upload ───────────────────────────────────────────────────
+      # ── App Store upload (disabled until Apple Distribution certificate is available) ──
       - name: Archive for App Store
-        if: env.APP_STORE_CONNECT_KEY != ''
+        if: env.ENABLE_APP_STORE_UPLOAD == 'true'
         run: |
           set -o pipefail
           xcodebuild archive \
@@ -166,14 +166,14 @@ jobs:
           | xcpretty
 
       - name: Write App Store Connect API key
-        if: env.APP_STORE_CONNECT_KEY != ''
+        if: env.ENABLE_APP_STORE_UPLOAD == 'true'
         run: |
           mkdir -p ~/.private_keys
           echo "$APP_STORE_CONNECT_KEY" | base64 --decode \
             > ~/.private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8
 
       - name: Export & upload to App Store Connect
-        if: env.APP_STORE_CONNECT_KEY != ''
+        if: env.ENABLE_APP_STORE_UPLOAD == 'true'
         run: |
           set -o pipefail
           xcodebuild -exportArchive \
