@@ -3,8 +3,14 @@ name: CodeQL
 on:
   push:
     branches: [main]
+    paths:
+      - '**/*.swift'
+      - 'ClaudeInSafari.xcodeproj/**'
   pull_request:
     branches: [main]
+    paths:
+      - '**/*.swift'
+      - 'ClaudeInSafari.xcodeproj/**'
   schedule:
     - cron: '0 6 * * 1'  # Weekly on Monday at 06:00 UTC
 
