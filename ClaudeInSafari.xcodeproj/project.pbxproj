@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		01AD3E5F7B8C9D0E1F2A3B4C /* AppDelegateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02AD4E6F8C9D0E1F2A3B4C5D /* AppDelegateTests.swift */; };
-		D9C8E7F6A5B4C3D2E1F0A9B7 /* ConstantsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D8E7F6A5B4C3D2E1F0A9B8 /* ConstantsTests.swift */; };
 		020608970AC171717C3AD738 /* MessageFramerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48CBDB59857AA797155E19CC /* MessageFramerTests.swift */; };
 		0E751393E09E0A8E2C5E8AAA /* ToolModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCF900FB4B4265BA727FFA21 /* ToolModels.swift */; };
 		257435801FBA70A001BC58B6 /* GifServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07542CB361F8FE6B0E4A5558 /* GifServiceTests.swift */; };
@@ -26,25 +25,29 @@
 		85E406993AE6C81DD74F1B0E /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9954643B23BF0AF20F074015 /* main.swift */; };
 		921D7ABA46275FD600060ED6 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D372117A4FF27A236BD5F8 /* Constants.swift */; };
 		9A6E898572D7D10C996C83CC /* MCPMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 896C584EA45AB96EAA96797F /* MCPMessage.swift */; };
+		A1B2C3D4E5F60718293A4B5C /* BrandColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A7B8C9D0E1F2A3B4C5 /* BrandColors.swift */; };
 		A3F1C2D4E5B6A7089C1D2E3F /* OnboardingWindowControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4E5F6A7089C1D2E3FA3F1C2 /* OnboardingWindowControllerTests.swift */; };
 		A9635C5FE604D747DE0D1D62 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = EAD6A30A647A7F4F5DC5DEA3 /* AppDelegate.swift */; };
 		AE7A3B63E56420BC88227115 /* ScreenshotService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5736A5C7E56CF23B6FF9B13A /* ScreenshotService.swift */; };
+		B04AE25841439136219583A5 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = B36043F3C22F5C5108491897 /* main.swift */; };
 		B0B3DAD82B9C21C2DF890362 /* AppleScriptBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02B361326E8F2C467CF43011 /* AppleScriptBridge.swift */; };
 		B9C04D834A40C22DE8146BBD /* MCPSocketServerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 439B4BEE06832D8A14D92084 /* MCPSocketServerTests.swift */; };
 		C5C31B08E3295067213DE349 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D372117A4FF27A236BD5F8 /* Constants.swift */; };
+		C6D7E8F9A0B1C2D3E4F5A6B7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E7F8A9B0C1D2E3F4A5B6C7D8 /* Assets.xcassets */; };
 		D5BE0BAB9625FB0132588BDC /* OnboardingWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E5E2B99CB3C4EDAEB877794 /* OnboardingWindowController.swift */; };
 		D9127E282A5767DAA1C48C5D /* MessageFramer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 652C99F1EAD7FA1BDBF44D9D /* MessageFramer.swift */; };
+		D9C8E7F6A5B4C3D2E1F0A9B7 /* ConstantsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9D8E7F6A5B4C3D2E1F0A9B8 /* ConstantsTests.swift */; };
 		E384720735F6190C0755DC2A /* MCPSocketServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A17192D2205200262959FCF5 /* MCPSocketServer.swift */; };
 		E9ED48328A1F0387B9334B12 /* ClaudeInSafari Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A2BCAFC762E47A469BC702E3 /* ClaudeInSafari Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		F8A556A293BA284872539B1F /* AppleScriptBridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C6819CDC28A43E78498350F /* AppleScriptBridgeTests.swift */; };
-		FA97D65DA63E1D2123E0014F /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96906F7FF10A8AF6F6E0CB2B /* MenuBarController.swift */; };
+		EFB932FB97B9CB59B25C29E9 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A4AF7CE0CF1BE8B0E8B873E /* Foundation.framework */; };
 		F0A1B2C3D4E5F6A7B8C9D0E1 /* FileAccessManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F8A9B0C1D2 /* FileAccessManager.swift */; };
 		F0A1B2C3D4E5F6A7B8C9D0E2 /* FileAccessManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F8A9B0C1D3 /* FileAccessManagerTests.swift */; };
+		F8A556A293BA284872539B1F /* AppleScriptBridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C6819CDC28A43E78498350F /* AppleScriptBridgeTests.swift */; };
+		FA97D65DA63E1D2123E0014F /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96906F7FF10A8AF6F6E0CB2B /* MenuBarController.swift */; };
 		FC4CA75768D2C5FD6249AE6B /* GifService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C53DE74FE809B179A899A57B /* GifService.swift */; };
 		FD8B1A2E3C4D5E6F7A8B9C0D /* ToolModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE9C0B1D2E3F4A5B6C7D8E9F /* ToolModelsTests.swift */; };
 		FF56AA2D0EFD16F29AFA30CD /* PermissionMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C6A1743F9A8F1A1B1BBFDE4 /* PermissionMonitor.swift */; };
-		A1B2C3D4E5F60718293A4B5C /* BrandColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A7B8C9D0E1F2A3B4C5 /* BrandColors.swift */; };
-		C6D7E8F9A0B1C2D3E4F5A6B7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E7F8A9B0C1D2E3F4A5B6C7D8 /* Assets.xcassets */; };
+		FFF8773B5740B58C71C8ED41 /* safari-mcp-bridge in Embed Bridge Binary */ = {isa = PBXBuildFile; fileRef = D3AFE9AA8606E20649EBE50B /* safari-mcp-bridge */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -62,9 +65,27 @@
 			remoteGlobalIDString = 7A6459D0852E13F1AA5438E6;
 			remoteInfo = ClaudeInSafari;
 		};
+		D23015DAE935769BC77755E7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E1A72CB5812F76376B946802 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = B7ACA6FBA03908F8FE5EA9E9;
+			remoteInfo = "safari-mcp-bridge";
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		122FA59692DF7BE81D441507 /* Embed Bridge Binary */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 6;
+			files = (
+				FFF8773B5740B58C71C8ED41 /* safari-mcp-bridge in Embed Bridge Binary */,
+			);
+			name = "Embed Bridge Binary";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D90BE1AC5B30C9E0CC7E4E76 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -80,11 +101,11 @@
 
 /* Begin PBXFileReference section */
 		0133189C5F0296CB11A35A28 /* ClaudeInSafariExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClaudeInSafariExtension.entitlements; sourceTree = "<group>"; };
-		02B361326E8F2C467CF43011 /* AppleScriptBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleScriptBridge.swift; sourceTree = "<group>"; };
 		02AD4E6F8C9D0E1F2A3B4C5D /* AppDelegateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegateTests.swift; sourceTree = "<group>"; };
-		C9D8E7F6A5B4C3D2E1F0A9B8 /* ConstantsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConstantsTests.swift; sourceTree = "<group>"; };
+		02B361326E8F2C467CF43011 /* AppleScriptBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleScriptBridge.swift; sourceTree = "<group>"; };
 		07542CB361F8FE6B0E4A5558 /* GifServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GifServiceTests.swift; sourceTree = "<group>"; };
 		14596A1FC6A28D35A07C800E /* ClaudeInSafari.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClaudeInSafari.entitlements; sourceTree = "<group>"; };
+		1A4AF7CE0CF1BE8B0E8B873E /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		3C6A1743F9A8F1A1B1BBFDE4 /* PermissionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionMonitor.swift; sourceTree = "<group>"; };
 		439B4BEE06832D8A14D92084 /* MCPSocketServerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPSocketServerTests.swift; sourceTree = "<group>"; };
 		48CBDB59857AA797155E19CC /* MessageFramerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageFramerTests.swift; sourceTree = "<group>"; };
@@ -105,23 +126,37 @@
 		9C6819CDC28A43E78498350F /* AppleScriptBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleScriptBridgeTests.swift; sourceTree = "<group>"; };
 		A17192D2205200262959FCF5 /* MCPSocketServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPSocketServer.swift; sourceTree = "<group>"; };
 		A2BCAFC762E47A469BC702E3 /* ClaudeInSafari Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "ClaudeInSafari Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AE9C0B1D2E3F4A5B6C7D8E9F /* ToolModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolModelsTests.swift; sourceTree = "<group>"; };
 		B19B82BB58657A6D1B058281 /* Claude in Safari.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Claude in Safari.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		B36043F3C22F5C5108491897 /* main.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		B4E5F6A7089C1D2E3FA3F1C2 /* OnboardingWindowControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingWindowControllerTests.swift; sourceTree = "<group>"; };
 		C2582CE7621B3778BA974E87 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C53DE74FE809B179A899A57B /* GifService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GifService.swift; sourceTree = "<group>"; };
 		C557C15A842E784429478650 /* FileServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileServiceTests.swift; sourceTree = "<group>"; };
+		C9D8E7F6A5B4C3D2E1F0A9B8 /* ConstantsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConstantsTests.swift; sourceTree = "<group>"; };
 		CCED58EC2A9B5A6E2523B951 /* PermissionMonitorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionMonitorTests.swift; sourceTree = "<group>"; };
+		D3AFE9AA8606E20649EBE50B /* safari-mcp-bridge */ = {isa = PBXFileReference; includeInIndex = 0; path = "safari-mcp-bridge"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D4E5F6A7B8C9D0E1F2A3B4C5 /* BrandColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandColors.swift; sourceTree = "<group>"; };
 		DCF900FB4B4265BA727FFA21 /* ToolModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolModels.swift; sourceTree = "<group>"; };
 		E1F2A3B4C5D6E7F8A9B0C1D2 /* FileAccessManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileAccessManager.swift; sourceTree = "<group>"; };
 		E1F2A3B4C5D6E7F8A9B0C1D3 /* FileAccessManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileAccessManagerTests.swift; sourceTree = "<group>"; };
+		E7F8A9B0C1D2E3F4A5B6C7D8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		EAD6A30A647A7F4F5DC5DEA3 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		EFD3A85665B31B76E55FCDE6 /* ToolRouterNotificationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolRouterNotificationTests.swift; sourceTree = "<group>"; };
-		AE9C0B1D2E3F4A5B6C7D8E9F /* ToolModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolModelsTests.swift; sourceTree = "<group>"; };
 		F1D372117A4FF27A236BD5F8 /* Constants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Constants.swift; sourceTree = "<group>"; };
 		F7A729444DE88ABCACE1FBD2 /* MCPMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPMessageTests.swift; sourceTree = "<group>"; };
-		D4E5F6A7B8C9D0E1F2A3B4C5 /* BrandColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandColors.swift; sourceTree = "<group>"; };
-		E7F8A9B0C1D2E3F4A5B6C7D8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		741288DE7F8F4B2D6DAF7DE2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EFB932FB97B9CB59B25C29E9 /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		0C6B44FEED01458847709BD1 /* ClaudeInSafari */ = {
@@ -149,6 +184,22 @@
 				3C6A1743F9A8F1A1B1BBFDE4 /* PermissionMonitor.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		4879A8A89C93D2FAF0060115 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				5B8EB5C6E3E4BBDD967F20BF /* OS X */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		5B8EB5C6E3E4BBDD967F20BF /* OS X */ = {
+			isa = PBXGroup;
+			children = (
+				1A4AF7CE0CF1BE8B0E8B873E /* Foundation.framework */,
+			);
+			name = "OS X";
 			sourceTree = "<group>";
 		};
 		607F690CCCD242C1E420B4A0 /* Services */ = {
@@ -179,6 +230,7 @@
 				A2BCAFC762E47A469BC702E3 /* ClaudeInSafari Extension.appex */,
 				B19B82BB58657A6D1B058281 /* Claude in Safari.app */,
 				7A6086210D19D2B963968546 /* ClaudeInSafariTests.xctest */,
+				D3AFE9AA8606E20649EBE50B /* safari-mcp-bridge */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -199,6 +251,8 @@
 				B8151B33E477EBB85BF8C88D /* Shared */,
 				75D580B3961DCD252FA311F4 /* Tests */,
 				73BBD61358131554A75035F2 /* Products */,
+				4879A8A89C93D2FAF0060115 /* Frameworks */,
+				F264074E341E36237BAA7B2E /* safari-mcp-bridge */,
 			);
 			sourceTree = "<group>";
 		};
@@ -252,6 +306,15 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
+		F264074E341E36237BAA7B2E /* safari-mcp-bridge */ = {
+			isa = PBXGroup;
+			children = (
+				B36043F3C22F5C5108491897 /* main.swift */,
+			);
+			name = "safari-mcp-bridge";
+			path = "safari-mcp-bridge";
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -267,8 +330,6 @@
 			dependencies = (
 			);
 			name = "ClaudeInSafari Extension";
-			packageProductDependencies = (
-			);
 			productName = "ClaudeInSafari Extension";
 			productReference = A2BCAFC762E47A469BC702E3 /* ClaudeInSafari Extension.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -280,18 +341,34 @@
 				B8486C7D659C51D7756DDFEE /* Sources */,
 				F1A2B3C4D5E6F7081920A1B2 /* Resources */,
 				D90BE1AC5B30C9E0CC7E4E76 /* Embed Foundation Extensions */,
+				122FA59692DF7BE81D441507 /* Embed Bridge Binary */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				C6B67B2B56982F845705A2DE /* PBXTargetDependency */,
+				0BE6495347688002560F1107 /* PBXTargetDependency */,
 			);
 			name = ClaudeInSafari;
-			packageProductDependencies = (
-			);
 			productName = ClaudeInSafari;
 			productReference = B19B82BB58657A6D1B058281 /* Claude in Safari.app */;
 			productType = "com.apple.product-type.application";
+		};
+		B7ACA6FBA03908F8FE5EA9E9 /* safari-mcp-bridge */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3AC56DC3F91C555FA35CEAFF /* Build configuration list for PBXNativeTarget "safari-mcp-bridge" */;
+			buildPhases = (
+				CA42C474BE062E605350701F /* Sources */,
+				741288DE7F8F4B2D6DAF7DE2 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "safari-mcp-bridge";
+			productName = "safari-mcp-bridge";
+			productReference = D3AFE9AA8606E20649EBE50B /* safari-mcp-bridge */;
+			productType = "com.apple.product-type.tool";
 		};
 		D67D1A069DEEB92CF981094D /* ClaudeInSafariTests */ = {
 			isa = PBXNativeTarget;
@@ -305,8 +382,6 @@
 				71C0AD667F199915EE023619 /* PBXTargetDependency */,
 			);
 			name = ClaudeInSafariTests;
-			packageProductDependencies = (
-			);
 			productName = ClaudeInSafariTests;
 			productReference = 7A6086210D19D2B963968546 /* ClaudeInSafariTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -337,6 +412,7 @@
 				7A6459D0852E13F1AA5438E6 /* ClaudeInSafari */,
 				084FCE1B9F31C025B821FC2C /* ClaudeInSafari Extension */,
 				D67D1A069DEEB92CF981094D /* ClaudeInSafariTests */,
+				B7ACA6FBA03908F8FE5EA9E9 /* safari-mcp-bridge */,
 			);
 		};
 /* End PBXProject section */
@@ -390,7 +466,7 @@
 			files = (
 				F8A556A293BA284872539B1F /* AppleScriptBridgeTests.swift in Sources */,
 				01AD3E5F7B8C9D0E1F2A3B4C /* AppDelegateTests.swift in Sources */,
-		D9C8E7F6A5B4C3D2E1F0A9B7 /* ConstantsTests.swift in Sources */,
+				D9C8E7F6A5B4C3D2E1F0A9B7 /* ConstantsTests.swift in Sources */,
 				3E3A0B200C0A287DA885E7A5 /* Constants.swift in Sources */,
 				F0A1B2C3D4E5F6A7B8C9D0E2 /* FileAccessManagerTests.swift in Sources */,
 				50788C66B072DEF05E5A9A64 /* FileServiceTests.swift in Sources */,
@@ -432,9 +508,23 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CA42C474BE062E605350701F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B04AE25841439136219583A5 /* main.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		0BE6495347688002560F1107 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "safari-mcp-bridge";
+			target = B7ACA6FBA03908F8FE5EA9E9 /* safari-mcp-bridge */;
+			targetProxy = D23015DAE935769BC77755E7 /* PBXContainerItemProxy */;
+		};
 		71C0AD667F199915EE023619 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 7A6459D0852E13F1AA5438E6 /* ClaudeInSafari */;
@@ -470,6 +560,19 @@
 				SDKROOT = macosx;
 			};
 			name = Debug;
+		};
+		0718C532F33CBDCA2F5A0348 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 4AKSB2RDBU;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
 		};
 		1212F8C715A0343152CB39EE /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -642,6 +745,19 @@
 			};
 			name = Release;
 		};
+		ACB3C6DC8B40340A32D81BFB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 4AKSB2RDBU;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
 		AFE78ED32999297AADB3EC7C /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -732,6 +848,15 @@
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
+		};
+		3AC56DC3F91C555FA35CEAFF /* Build configuration list for PBXNativeTarget "safari-mcp-bridge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0718C532F33CBDCA2F5A0348 /* Release */,
+				ACB3C6DC8B40340A32D81BFB /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		5AD3CB31CE3123E5586A8D81 /* Build configuration list for PBXNativeTarget "ClaudeInSafari Extension" */ = {
 			isa = XCConfigurationList;
