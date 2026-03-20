@@ -25,10 +25,7 @@ case "--status":
     print("--status not yet implemented")
     exit(1)
 case nil:
-    // Default: bridge relay mode
-    // TODO: Task 3
-    print("bridge relay not yet implemented")
-    exit(1)
+    BridgeRelay.run()
 default:
     fputs("Unknown flag: \(command!)\nUsage: safari-mcp-bridge [--install | --uninstall | --status]\n", stderr)
     exit(1)

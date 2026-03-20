@@ -10,6 +10,8 @@
 		01AD3E5F7B8C9D0E1F2A3B4C /* AppDelegateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02AD4E6F8C9D0E1F2A3B4C5D /* AppDelegateTests.swift */; };
 		020608970AC171717C3AD738 /* MessageFramerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48CBDB59857AA797155E19CC /* MessageFramerTests.swift */; };
 		0E751393E09E0A8E2C5E8AAA /* ToolModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = DCF900FB4B4265BA727FFA21 /* ToolModels.swift */; };
+		178CDADAE3624CE23D341758 /* BridgeRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEB7A90EAC096AE3069D4C81 /* BridgeRelay.swift */; };
+		17B3B58D3BC5E156E6A235D7 /* BridgeRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEB7A90EAC096AE3069D4C81 /* BridgeRelay.swift */; };
 		257435801FBA70A001BC58B6 /* GifServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07542CB361F8FE6B0E4A5558 /* GifServiceTests.swift */; };
 		2C8D97C719B2C8ABC14F61DA /* ToolRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4D8BEC346192E189913F39 /* ToolRouter.swift */; };
 		2E19B15D715BBC43C9DBFF32 /* MCPMessageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7A729444DE88ABCACE1FBD2 /* MCPMessageTests.swift */; };
@@ -43,6 +45,7 @@
 		F0A1B2C3D4E5F6A7B8C9D0E1 /* FileAccessManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F8A9B0C1D2 /* FileAccessManager.swift */; };
 		F0A1B2C3D4E5F6A7B8C9D0E2 /* FileAccessManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F8A9B0C1D3 /* FileAccessManagerTests.swift */; };
 		F8A556A293BA284872539B1F /* AppleScriptBridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C6819CDC28A43E78498350F /* AppleScriptBridgeTests.swift */; };
+		F9259991E9A1D70ABC07B32E /* BridgeRelayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7D3512A6822EB607101A14C /* BridgeRelayTests.swift */; };
 		FA97D65DA63E1D2123E0014F /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96906F7FF10A8AF6F6E0CB2B /* MenuBarController.swift */; };
 		FC4CA75768D2C5FD6249AE6B /* GifService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C53DE74FE809B179A899A57B /* GifService.swift */; };
 		FD8B1A2E3C4D5E6F7A8B9C0D /* ToolModelsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AE9C0B1D2E3F4A5B6C7D8E9F /* ToolModelsTests.swift */; };
@@ -126,6 +129,7 @@
 		9C6819CDC28A43E78498350F /* AppleScriptBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleScriptBridgeTests.swift; sourceTree = "<group>"; };
 		A17192D2205200262959FCF5 /* MCPSocketServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPSocketServer.swift; sourceTree = "<group>"; };
 		A2BCAFC762E47A469BC702E3 /* ClaudeInSafari Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "ClaudeInSafari Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A7D3512A6822EB607101A14C /* BridgeRelayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BridgeRelayTests.swift; sourceTree = "<group>"; };
 		AE9C0B1D2E3F4A5B6C7D8E9F /* ToolModelsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolModelsTests.swift; sourceTree = "<group>"; };
 		B19B82BB58657A6D1B058281 /* Claude in Safari.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Claude in Safari.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		B36043F3C22F5C5108491897 /* main.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
@@ -138,6 +142,7 @@
 		D3AFE9AA8606E20649EBE50B /* safari-mcp-bridge */ = {isa = PBXFileReference; includeInIndex = 0; path = "safari-mcp-bridge"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D4E5F6A7B8C9D0E1F2A3B4C5 /* BrandColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrandColors.swift; sourceTree = "<group>"; };
 		DCF900FB4B4265BA727FFA21 /* ToolModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolModels.swift; sourceTree = "<group>"; };
+		DEB7A90EAC096AE3069D4C81 /* BridgeRelay.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BridgeRelay.swift; sourceTree = "<group>"; };
 		E1F2A3B4C5D6E7F8A9B0C1D2 /* FileAccessManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileAccessManager.swift; sourceTree = "<group>"; };
 		E1F2A3B4C5D6E7F8A9B0C1D3 /* FileAccessManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileAccessManagerTests.swift; sourceTree = "<group>"; };
 		E7F8A9B0C1D2E3F4A5B6C7D8 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -275,6 +280,7 @@
 				AE9C0B1D2E3F4A5B6C7D8E9F /* ToolModelsTests.swift */,
 				EFD3A85665B31B76E55FCDE6 /* ToolRouterNotificationTests.swift */,
 				4F410276953CA7D55B48FF36 /* ToolRouterTests.swift */,
+				A7D3512A6822EB607101A14C /* BridgeRelayTests.swift */,
 			);
 			path = Swift;
 			sourceTree = "<group>";
@@ -310,6 +316,7 @@
 			isa = PBXGroup;
 			children = (
 				B36043F3C22F5C5108491897 /* main.swift */,
+				DEB7A90EAC096AE3069D4C81 /* BridgeRelay.swift */,
 			);
 			name = "safari-mcp-bridge";
 			path = "safari-mcp-bridge";
@@ -481,6 +488,7 @@
 				6BFDDA4BC04CB59098274D6D /* ToolRouterNotificationTests.swift in Sources */,
 				FD8B1A2E3C4D5E6F7A8B9C0D /* ToolModelsTests.swift in Sources */,
 				5BF79D7662D53EA3EE5DECD8 /* ToolRouterTests.swift in Sources */,
+				F9259991E9A1D70ABC07B32E /* BridgeRelayTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -505,6 +513,7 @@
 				0E751393E09E0A8E2C5E8AAA /* ToolModels.swift in Sources */,
 				2C8D97C719B2C8ABC14F61DA /* ToolRouter.swift in Sources */,
 				85E406993AE6C81DD74F1B0E /* main.swift in Sources */,
+				17B3B58D3BC5E156E6A235D7 /* BridgeRelay.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -513,6 +522,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B04AE25841439136219583A5 /* main.swift in Sources */,
+				178CDADAE3624CE23D341758 /* BridgeRelay.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
