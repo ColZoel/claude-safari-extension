@@ -77,11 +77,14 @@ jobs:
             echo "::error::Could not find ClaudeInSafari.app in build output"
             exit 1
           fi
-          # Sign from inside out: extension first, then app (Apple requires this for bundles with extensions)
+          # Sign from inside out: extension → bridge binary → app (Apple requires inner-first for bundles)
           codesign --force --options runtime \
             --sign "Developer ID Application" \
             --entitlements "ClaudeInSafari Extension/ClaudeInSafariExtension.entitlements" \
             "$APP_PATH/Contents/PlugIns/ClaudeInSafari Extension.appex"
+          codesign --force --options runtime \
+            --sign "Developer ID Application" \
+            "$APP_PATH/Contents/MacOS/safari-mcp-bridge"
           codesign --force --options runtime \
             --sign "Developer ID Application" \
             --entitlements "ClaudeInSafari/ClaudeInSafari.entitlements" \
