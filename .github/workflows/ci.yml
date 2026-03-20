@@ -49,13 +49,37 @@ jobs:
           | xcpretty
 
       - name: Run Swift tests
+        timeout-minutes: 5
         run: |
-          set -o pipefail
+          # xcodebuild test hangs after completion because the macOS app
+          # test host (ClaudeInSafari.app) keeps its services running.
+          # Run in background and poll for the test summary line.
           xcodebuild test \
             -project ClaudeInSafari.xcodeproj \
-            -scheme ClaudeInSafariTests \
+            -scheme ClaudeInSafari \
             -destination "platform=macOS" \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-          | xcpretty
+          > /tmp/xc-test.log 2>&1 &
+          XC_PID=$!
+
+          while kill -0 $XC_PID 2>/dev/null; do
+            if grep -q "^Executed" /tmp/xc-test.log 2>/dev/null; then
+              cat /tmp/xc-test.log
+              kill $XC_PID 2>/dev/null || true
+              wait $XC_PID 2>/dev/null || true
+              if grep -q "0 failures" /tmp/xc-test.log; then
+                echo "All tests passed."
+                exit 0
+              else
+                echo "Tests had failures."
+                exit 1
+              fi
+            fi
+            sleep 2
+          done
+
+          # xcodebuild exited on its own
+          cat /tmp/xc-test.log
+          wait $XC_PID 2>/dev/null
