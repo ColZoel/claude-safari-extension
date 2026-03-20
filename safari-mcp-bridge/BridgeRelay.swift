@@ -82,7 +82,9 @@ enum BridgeRelay {
         setbuf(stdout, nil) // MCP requires unbuffered output
 
         let group = DispatchGroup()
-        var relayError = false
+        // Separate flags per direction to avoid data race (each written by only one queue)
+        var stdinRelayError = false
+        var stdoutRelayError = false
 
         // stdin → socket
         group.enter()
@@ -98,7 +100,7 @@ enum BridgeRelay {
                     let w = Darwin.write(fd, buf.advanced(by: written), n - written)
                     if w <= 0 {
                         fputs("Bridge: write to socket failed: \(String(cString: strerror(errno)))\n", stderr)
-                        relayError = true
+                        stdinRelayError = true
                         group.leave()
                         return
                     }
@@ -123,7 +125,7 @@ enum BridgeRelay {
                     let w = fwrite(buf.advanced(by: written), 1, n - written, stdout)
                     if w <= 0 {
                         fputs("Bridge: write to stdout failed: \(String(cString: strerror(errno)))\n", stderr)
-                        relayError = true
+                        stdoutRelayError = true
                         group.leave()
                         return
                     }
@@ -136,7 +138,7 @@ enum BridgeRelay {
 
         group.wait()
         close(fd)
-        exit(relayError ? 1 : 0)
+        exit((stdinRelayError || stdoutRelayError) ? 1 : 0)
     }
 
     /// Performs a full MCP handshake (initialize + tools/list) and returns the tool count.

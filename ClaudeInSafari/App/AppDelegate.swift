@@ -282,9 +282,15 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                     let output = stderr.isEmpty ? stdout : "\(stdout)\n\(stderr)"
                     DispatchQueue.main.async {
                         let alert = NSAlert()
-                        alert.messageText = "Claude Integration removed"
-                        alert.informativeText = output
-                        alert.alertStyle = .informational
+                        if process.terminationStatus == 0 {
+                            alert.messageText = "Claude Integration removed"
+                            alert.informativeText = stdout
+                            alert.alertStyle = .informational
+                        } else {
+                            alert.messageText = "Uninstallation failed"
+                            alert.informativeText = output
+                            alert.alertStyle = .warning
+                        }
                         alert.runModal()
                     }
                 } catch {
