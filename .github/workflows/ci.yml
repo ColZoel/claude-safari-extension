@@ -36,10 +36,10 @@ jobs:
       - name: Validate injected scripts syntax
         run: node scripts/validate-injected-scripts.js
 
-      - name: Build (Xcode)
+      - name: Build for testing
         run: |
           set -o pipefail
-          xcodebuild build \
+          xcodebuild build-for-testing \
             -project ClaudeInSafari.xcodeproj \
             -scheme ClaudeInSafari \
             -destination "platform=macOS" \
@@ -49,12 +49,12 @@ jobs:
           | xcpretty
 
       - name: Run Swift tests
-        timeout-minutes: 15
+        timeout-minutes: 10
         run: |
-          # xcodebuild test hangs after completion because the macOS app
-          # test host (ClaudeInSafari.app) keeps its services running.
-          # Run in background and poll for the test summary line.
-          xcodebuild test \
+          # test-without-building avoids re-compilation and reduces the
+          # chance of the test host app hanging after tests complete.
+          # Background + poll as a safety net in case it still hangs.
+          xcodebuild test-without-building \
             -project ClaudeInSafari.xcodeproj \
             -scheme ClaudeInSafari \
             -destination "platform=macOS" \
