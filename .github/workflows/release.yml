@@ -68,7 +68,7 @@ jobs:
       - name: Sign .app bundle
         if: env.APPLE_CERTIFICATE != ''
         run: |
-          APP_PATH=$(find build/DerivedData -name "ClaudeInSafari.app" -maxdepth 6 | head -1)
+          APP_PATH=$(find build/DerivedData -name "Claude in Safari.app" -maxdepth 6 | head -1)
           if [ -z "$APP_PATH" ]; then
             echo "::error::Could not find ClaudeInSafari.app in build output"
             exit 1
@@ -87,7 +87,7 @@ jobs:
       - name: Locate unsigned .app (when signing skipped)
         if: env.APPLE_CERTIFICATE == ''
         run: |
-          APP_PATH=$(find build/DerivedData -name "ClaudeInSafari.app" -maxdepth 6 | head -1)
+          APP_PATH=$(find build/DerivedData -name "Claude in Safari.app" -maxdepth 6 | head -1)
           if [ -z "$APP_PATH" ]; then
             echo "::error::Could not find ClaudeInSafari.app in build output"
             exit 1
@@ -194,7 +194,7 @@ jobs:
           body: |
             ## Claude in Safari ${{ github.ref_name }}
 
-            Signed and notarized — drag **ClaudeInSafari.app** from the DMG to Applications and launch normally.
+            Signed and notarized — drag **Claude in Safari.app** from the DMG to Applications and launch normally.
 
             See [ROADMAP.md](https://github.com/${{ github.repository }}/blob/main/ROADMAP.md) for what's included in this version.
           prerelease: ${{ startsWith(github.ref_name, 'v0.') }}
@@ -226,7 +226,7 @@ jobs:
           body: |
             ## Claude in Safari ${{ github.ref_name }}
 
-            > **Pre-release build** — unsigned, for developers only. Requires Gatekeeper bypass to run (`xattr -cr ClaudeInSafari.app`).
+            > **Pre-release build** — unsigned, for developers only. Requires Gatekeeper bypass to run (`xattr -cr "Claude in Safari.app"`).
 
             See [ROADMAP.md](https://github.com/${{ github.repository }}/blob/main/ROADMAP.md) for what's included in this version.
           prerelease: ${{ startsWith(github.ref_name, 'v0.') }}
