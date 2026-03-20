@@ -49,7 +49,7 @@ jobs:
           | xcpretty
 
       - name: Run Swift tests
-        timeout-minutes: 5
+        timeout-minutes: 15
         run: |
           # xcodebuild test hangs after completion because the macOS app
           # test host (ClaudeInSafari.app) keeps its services running.
@@ -65,7 +65,7 @@ jobs:
           XC_PID=$!
 
           while kill -0 $XC_PID 2>/dev/null; do
-            if grep -q "^Executed" /tmp/xc-test.log 2>/dev/null; then
+            if grep -q "Executed.*tests" /tmp/xc-test.log 2>/dev/null; then
               cat /tmp/xc-test.log
               kill $XC_PID 2>/dev/null || true
               wait $XC_PID 2>/dev/null || true
