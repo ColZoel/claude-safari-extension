@@ -19,6 +19,7 @@ private enum Layout {
 enum OnboardingScreen: Equatable {
     case welcome
     case step(OnboardingStep)
+    case connectClaude
     case done
 }
 
@@ -107,6 +108,7 @@ final class OnboardingWindowController: NSWindowController {
             }
             startPolling(for: step)
         }
+        // Note: .connectClaude polling starts when user clicks Install button, not on screen show
     }
 
     func advance() {
@@ -116,6 +118,8 @@ final class OnboardingWindowController: NSWindowController {
         case .step(.safariExtension):
             show(screen: .step(.screenRecording))
         case .step(.screenRecording):
+            show(screen: .connectClaude)
+        case .connectClaude:
             show(screen: .done)
         case .done:
             dismiss()
@@ -176,10 +180,11 @@ final class OnboardingWindowController: NSWindowController {
 
     private func buildView(for screen: OnboardingScreen) -> NSView {
         switch screen {
-        case .welcome:              return buildWelcomeView()
+        case .welcome:                return buildWelcomeView()
         case .step(.safariExtension): return buildSafariExtensionView()
         case .step(.screenRecording): return buildScreenRecordingView()
-        case .done:                 return buildDoneView()
+        case .connectClaude:          return buildConnectClaudeView()
+        case .done:                   return buildDoneView()
         }
     }
 
@@ -348,6 +353,151 @@ final class OnboardingWindowController: NSWindowController {
     }
 
     @objc private func manualAdvance() { advance() }
+
+    // MARK: Connect to Claude Step
+
+    private func buildConnectClaudeView() -> NSView {
+        let root = paddedRoot()
+
+        // Icon: link/chain symbol
+        let iconView = makeIconView(size: Layout.iconSizeSm, corner: Layout.cornerSm,
+                                    content: sfSymbolImage("link", size: Layout.iconSizeSm * 0.55))
+        iconView.frame.origin = CGPoint(x: Layout.padding, y: Layout.windowHeight - Layout.padding - Layout.iconSizeSm)
+        root.addSubview(iconView)
+
+        let title = makeLabel("Connect to Claude", size: 20, weight: .bold)
+        title.frame = NSRect(x: Layout.padding, y: iconView.frame.minY - 36,
+                             width: Layout.windowWidth - Layout.padding * 2, height: 26)
+        root.addSubview(title)
+
+        if AppConstants.isSandboxed {
+            // App Store flow: copy command + open Terminal
+            let body = makeLabel(
+                "One more step — connect this app to Claude Code and Claude Desktop so they can use Safari.",
+                size: 13, weight: .regular, color: .secondaryLabelColor, wraps: true)
+            body.frame = NSRect(x: Layout.padding, y: title.frame.minY - 44,
+                                width: Layout.windowWidth - Layout.padding * 2, height: 36)
+            root.addSubview(body)
+
+            // Command box
+            let commandBox = makeInstructionBox("Click Install, then paste (\u{2318}V) in Terminal and press Enter.")
+            commandBox.frame = NSRect(x: Layout.padding, y: body.frame.minY - 68,
+                                      width: Layout.windowWidth - Layout.padding * 2, height: 56)
+            root.addSubview(commandBox)
+
+            let primary = makeButton("Install (Copy & Open Terminal)", action: #selector(copyAndOpenTerminal), primary: true)
+            primary.frame = NSRect(x: Layout.padding, y: 100, width: Layout.windowWidth - Layout.padding * 2, height: 36)
+            root.addSubview(primary)
+        } else {
+            // DMG flow: auto-install
+            let body = makeLabel(
+                "Connect this app to Claude Code and Claude Desktop so they can use Safari.",
+                size: 13, weight: .regular, color: .secondaryLabelColor, wraps: true)
+            body.frame = NSRect(x: Layout.padding, y: title.frame.minY - 36,
+                                width: Layout.windowWidth - Layout.padding * 2, height: 28)
+            root.addSubview(body)
+
+            let primary = makeButton("Install", action: #selector(runInstallDirectly), primary: true)
+            primary.frame = NSRect(x: Layout.padding, y: 100, width: Layout.windowWidth - Layout.padding * 2, height: 36)
+            root.addSubview(primary)
+        }
+
+        // Detecting row — polls for marker file (initially hidden, shown after Install click)
+        let detecting = makeDetectingRow("Waiting for installation\u{2026}")
+        detecting.frame = NSRect(x: Layout.padding, y: 64, width: Layout.windowWidth - Layout.padding * 2, height: 32)
+        detecting.isHidden = true
+        detecting.identifier = NSUserInterfaceItemIdentifier("connectDetecting")
+        root.addSubview(detecting)
+
+        let skip = makeButton("I'll do this later \u{2192}", action: #selector(skipConnect), primary: false)
+        skip.frame = NSRect(x: Layout.padding, y: 30, width: Layout.windowWidth - Layout.padding * 2, height: 24)
+        root.addSubview(skip)
+
+        addTimeline(to: root, activeIndex: 2)
+        return root
+    }
+
+    @objc private func copyAndOpenTerminal() {
+        let command = "\"\(AppConstants.bridgeBinaryPath)\" --install --verify"
+
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(command, forType: .string)
+
+        // Open Terminal
+        let terminalURL = URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app")
+        NSWorkspace.shared.openApplication(at: terminalURL, configuration: NSWorkspace.OpenConfiguration()) { _, error in
+            if let error = error {
+                NSLog("OnboardingWindowController: failed to open Terminal — %@", error.localizedDescription)
+            }
+        }
+
+        // Start polling for marker file
+        startMarkerPolling()
+    }
+
+    @objc private func runInstallDirectly() {
+        // Reuse the shared bridge runner; advance onboarding on success
+        AppDelegate.runBridge(
+            arguments: ["--install", "--verify"],
+            successTitle: "Claude Integration installed",
+            failureTitle: "Installation failed"
+        ) { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self?.advance()
+            }
+        }
+    }
+
+    @objc private func skipConnect() { advance() }
+
+    /// Maximum time (seconds) to wait for the marker file before showing a timeout message.
+    /// 30s matches the navigation-settlement timeout used elsewhere in the extension.
+    private static let markerPollingTimeout: TimeInterval = 30
+
+    private var markerPollingStart: Date?
+
+    private func startMarkerPolling() {
+        // Show detecting row
+        if let detectingRow = window?.contentView?.subviews.first(where: {
+            $0.identifier == NSUserInterfaceItemIdentifier("connectDetecting")
+        }) {
+            detectingRow.isHidden = false
+        }
+
+        markerPollingStart = Date()
+
+        // Poll the marker file every 2 seconds
+        pollTimer?.invalidate()
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            guard let self, !self.dismissed else { return }
+            guard case .connectClaude = self.currentScreen else { return }
+
+            if let url = AppConstants.mcpConfigInstalledURL,
+               FileManager.default.fileExists(atPath: url.path) {
+                self.stopPolling()
+                self.advance()
+                return
+            }
+
+            // Timeout — update detecting row with helpful message
+            if let start = self.markerPollingStart,
+               Date().timeIntervalSince(start) > Self.markerPollingTimeout {
+                self.stopPolling()
+                if let detectingRow = self.window?.contentView?.subviews.first(where: {
+                    $0.identifier == NSUserInterfaceItemIdentifier("connectDetecting")
+                }) {
+                    // Replace spinner with timeout message
+                    detectingRow.subviews.forEach { $0.removeFromSuperview() }
+                    let label = NSTextField(labelWithString: "Installation not detected. You can try again or skip this step.")
+                    label.font = NSFont.systemFont(ofSize: 12)
+                    label.textColor = .secondaryLabelColor
+                    label.frame = NSRect(x: 8, y: 8, width: Layout.windowWidth - Layout.padding * 2 - 16, height: 16)
+                    detectingRow.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+                    detectingRow.addSubview(label)
+                }
+            }
+        }
+    }
 
     // MARK: Done
 
@@ -572,15 +722,16 @@ final class OnboardingWindowController: NSWindowController {
         return row
     }
 
-    /// Adds the 2-segment timeline strip at the bottom of a step view.
-    /// `activeIndex`: 0 = Safari Extension, 1 = Screen Recording
+    /// Adds the 3-segment timeline strip at the bottom of a step view.
+    /// `activeIndex`: 0 = Safari Extension, 1 = Screen Recording, 2 = Connect
     private func addTimeline(to root: NSView, activeIndex: Int) {
-        let labels = ["Safari Extension", "Screen Recording"]
-        let segWidth = (Layout.windowWidth - Layout.padding * 2 - 5) / 2
+        let labels = ["Safari Extension", "Screen Recording", "Connect"]
+        let segCount = labels.count
+        let segWidth = (Layout.windowWidth - Layout.padding * 2 - CGFloat(segCount - 1) * 5) / CGFloat(segCount)
         let barY: CGFloat = 14
         let labelY: CGFloat = 2
 
-        for i in 0..<2 {
+        for i in 0..<segCount {
             let x = Layout.padding + CGFloat(i) * (segWidth + 5)
 
             // Bar
@@ -597,7 +748,7 @@ final class OnboardingWindowController: NSWindowController {
             root.addSubview(bar)
 
             // Label
-            let lbl = NSTextField(labelWithString: i < activeIndex ? "✓ \(labels[i])" : labels[i])
+            let lbl = NSTextField(labelWithString: i < activeIndex ? "\u{2713} \(labels[i])" : labels[i])
             lbl.font = NSFont.systemFont(ofSize: 9, weight: i == activeIndex ? .semibold : .regular)
             lbl.textColor = i < activeIndex ? NSColor.systemGreen
                           : i == activeIndex ? .claudeOrange

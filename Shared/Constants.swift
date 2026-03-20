@@ -38,6 +38,23 @@ enum AppConstants {
         appGroupContainerURL?.appendingPathComponent("extension_generation")
     }
 
+    /// URL for the MCP config install marker file (written by safari-mcp-bridge --install,
+    /// read by the main app to detect successful config installation).
+    static var mcpConfigInstalledURL: URL? {
+        appGroupContainerURL?.appendingPathComponent("mcp_config_installed.json")
+    }
+
+    /// Absolute path to the safari-mcp-bridge binary inside the current app bundle.
+    static var bridgeBinaryPath: String {
+        Bundle.main.bundlePath + "/Contents/MacOS/safari-mcp-bridge"
+    }
+
+    /// True when running inside App Sandbox (detected via APP_SANDBOX_CONTAINER_ID environment variable).
+    /// Unsandboxed builds can launch the bridge binary directly; sandboxed builds copy the command to clipboard instead.
+    static var isSandboxed: Bool {
+        ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
+    }
+
     // MARK: - Branding
     static let appDisplayName = "Claude in Safari"
     static let brandColorHex = "#D97757"

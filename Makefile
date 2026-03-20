@@ -46,7 +46,8 @@ APP_PATH     = $(BUILD_DIR)/$(APP_NAME).app
 # ---------------------------------------------------------------------------
 
 .PHONY: dev build run kill test test-swift test-all send list-tools status clean help \
-        health doctor queue-clean safari-quit safari-open safari-restart reload-ext functional-check dmg
+        health doctor queue-clean safari-quit safari-open safari-restart reload-ext functional-check dmg \
+        bridge bridge-install bridge-status
 
 help: ## Show this help
 	@grep -E '^[a-z_-]+:.*##' $(MAKEFILE_LIST) | awk -F ':.*## ' '{printf "  %-16s %s\n", $$1, $$2}'
@@ -149,6 +150,32 @@ safari-restart: safari-quit safari-open ## Quit + reopen Safari (resets Allow Un
 
 dmg: build ## Create a DMG installer from the built app
 	@scripts/create-dmg.sh "$(BUILD_DIR)/Build/Products/Debug/Claude in Safari.app"
+
+bridge: ## Build the safari-mcp-bridge CLI tool
+	@xcodebuild build \
+		-project $(PROJECT) \
+		-scheme safari-mcp-bridge \
+		-destination "$(DEST)" \
+		-quiet
+	@echo "Bridge built successfully"
+
+bridge-install: bridge ## Build and run --install
+	@BRIDGE=$$(find ~/Library/Developer/Xcode/DerivedData/ClaudeInSafari-*/Build/Products -name safari-mcp-bridge -type f 2>/dev/null | head -1); \
+	if [ -n "$$BRIDGE" ]; then \
+		"$$BRIDGE" --install --verify; \
+	else \
+		echo "ERROR: safari-mcp-bridge not found. Run 'make bridge' first."; \
+		exit 1; \
+	fi
+
+bridge-status: ## Show bridge status
+	@BRIDGE=$$(find ~/Library/Developer/Xcode/DerivedData/ClaudeInSafari-*/Build/Products -name safari-mcp-bridge -type f 2>/dev/null | head -1); \
+	if [ -n "$$BRIDGE" ]; then \
+		"$$BRIDGE" --status; \
+	else \
+		echo "ERROR: safari-mcp-bridge not found. Run 'make bridge' first."; \
+		exit 1; \
+	fi
 
 safari-quit: ## Quit Safari (tabs are preserved on restart)
 	@if pgrep -x Safari >/dev/null 2>&1; then \

@@ -51,6 +51,9 @@ final class OnboardingWindowControllerTests: XCTestCase {
         XCTAssertEqual(controller.currentScreen, .step(.screenRecording))
 
         controller.advance()
+        XCTAssertEqual(controller.currentScreen, .connectClaude)
+
+        controller.advance()
         XCTAssertEqual(controller.currentScreen, .done)
 
         controller.window?.orderOut(nil)
@@ -65,8 +68,8 @@ final class OnboardingWindowControllerTests: XCTestCase {
 
         controller.showOnboarding(startingAt: nil)
 
-        // Navigate to .done: welcome → safari → screenRecording → done (3 advances)
-        for _ in 0..<3 { controller.advance() }
+        // Navigate to .done: welcome → safari → screenRecording → connectClaude → done (4 advances)
+        for _ in 0..<4 { controller.advance() }
         XCTAssertEqual(controller.currentScreen, .done)
         XCTAssertFalse(dismissFired, "onDismiss should not fire until advance from .done")
 
@@ -342,7 +345,7 @@ final class OnboardingWindowControllerTests: XCTestCase {
     func testDoneScreen_containsExamplePrompt() {
         let (controller, _) = makeController()
         controller.showOnboarding(startingAt: nil)
-        for _ in 0..<3 { controller.advance() }
+        for _ in 0..<4 { controller.advance() }
         XCTAssertEqual(controller.currentScreen, .done)
 
         // Walk the view hierarchy to find a text field containing the example prompt
@@ -359,7 +362,7 @@ final class OnboardingWindowControllerTests: XCTestCase {
     func testDoneScreen_containsTryThisLabel() {
         let (controller, _) = makeController()
         controller.showOnboarding(startingAt: nil)
-        for _ in 0..<3 { controller.advance() }
+        for _ in 0..<4 { controller.advance() }
 
         let contentView = controller.window?.contentView
         let tryLabel = findTextField(in: contentView, matching: "Try this in Claude Code:")
@@ -373,7 +376,7 @@ final class OnboardingWindowControllerTests: XCTestCase {
     func testDoneScreen_containsCopyButton() {
         let (controller, _) = makeController()
         controller.showOnboarding(startingAt: nil)
-        for _ in 0..<3 { controller.advance() }
+        for _ in 0..<4 { controller.advance() }
 
         let contentView = controller.window?.contentView
         let copyButton = findButton(in: contentView, titled: "Copy")
@@ -387,7 +390,7 @@ final class OnboardingWindowControllerTests: XCTestCase {
     func testCopyButton_placesPromptOnPasteboard() {
         let (controller, _) = makeController()
         controller.showOnboarding(startingAt: nil)
-        for _ in 0..<3 { controller.advance() }
+        for _ in 0..<4 { controller.advance() }
         defer { NSPasteboard.general.clearContents() }
 
         let contentView = controller.window?.contentView
@@ -440,6 +443,74 @@ final class OnboardingWindowControllerTests: XCTestCase {
         // Silent registration SHOULD happen on step entry (so app appears in System Settings)
         XCTAssertEqual(checker.registerScreenRecordingCallCount, 1,
                        "registerScreenRecording must be called on step entry for TCC registration")
+
+        controller.window?.orderOut(nil)
+    }
+
+    // MARK: - T21: advance from screenRecording goes to connectClaude
+
+    func testAdvance_fromScreenRecording_goesToConnectClaude() {
+        let (controller, _) = makeController()
+        controller.showOnboarding(startingAt: nil)
+
+        // Navigate: welcome → safariExtension → screenRecording → connectClaude
+        controller.advance() // → safariExtension
+        controller.advance() // → screenRecording
+        controller.advance() // → connectClaude (NEW — previously went to done)
+
+        XCTAssertEqual(controller.currentScreen, .connectClaude)
+
+        controller.window?.orderOut(nil)
+    }
+
+    // MARK: - T22: advance from connectClaude goes to done
+
+    func testAdvance_fromConnectClaude_goesToDone() {
+        let (controller, _) = makeController()
+        controller.showOnboarding(startingAt: nil)
+
+        controller.advance() // → safariExtension
+        controller.advance() // → screenRecording
+        controller.advance() // → connectClaude
+        controller.advance() // → done
+
+        XCTAssertEqual(controller.currentScreen, .done)
+
+        controller.window?.orderOut(nil)
+    }
+
+    // MARK: - T23: connectClaude screen contains "Connect to Claude" title
+
+    func testConnectClaudeScreen_containsTitle() {
+        let (controller, _) = makeController()
+        controller.showOnboarding(startingAt: nil)
+
+        controller.advance() // → safariExtension
+        controller.advance() // → screenRecording
+        controller.advance() // → connectClaude
+
+        XCTAssertEqual(controller.currentScreen, .connectClaude)
+
+        let contentView = controller.window?.contentView
+        let titleField = findTextField(in: contentView, matching: "Connect to Claude")
+        XCTAssertNotNil(titleField, "Connect screen must contain 'Connect to Claude' title")
+
+        controller.window?.orderOut(nil)
+    }
+
+    // MARK: - T24: connectClaude screen contains skip button
+
+    func testConnectClaudeScreen_containsSkipButton() {
+        let (controller, _) = makeController()
+        controller.showOnboarding(startingAt: nil)
+
+        controller.advance() // → safariExtension
+        controller.advance() // → screenRecording
+        controller.advance() // → connectClaude
+
+        let contentView = controller.window?.contentView
+        let skipButton = findButton(in: contentView, titled: "I'll do this later \u{2192}")
+        XCTAssertNotNil(skipButton, "Connect screen must contain a skip button")
 
         controller.window?.orderOut(nil)
     }

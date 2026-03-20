@@ -49,4 +49,22 @@ final class MenuBarControllerTests: XCTestCase {
         let status = PermissionStatus(extensionEnabled: false, screenRecording: true)
         XCTAssertEqual(MenuBarController.menuBarState(from: status), .notConnected)
     }
+
+    // T7 — onInstallIntegration callback is settable
+    func testOnInstallIntegration_callback() {
+        let controller = MenuBarController()
+        var called = false
+        controller.onInstallIntegration = { called = true }
+        controller.onInstallIntegration?()
+        XCTAssertTrue(called)
+    }
+
+    // T8 — onUninstallIntegration callback is settable
+    func testOnUninstallIntegration_callback() {
+        let controller = MenuBarController()
+        var called = false
+        controller.onUninstallIntegration = { called = true }
+        controller.onUninstallIntegration?()
+        XCTAssertTrue(called)
+    }
 }
