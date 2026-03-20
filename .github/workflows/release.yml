@@ -10,6 +10,8 @@ jobs:
     name: Build & Publish Release
     runs-on: macos-15
     environment: Production
+    permissions:
+      contents: write
 
     env:
       APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
