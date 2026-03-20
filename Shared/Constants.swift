@@ -38,6 +38,12 @@ enum AppConstants {
         appGroupContainerURL?.appendingPathComponent("extension_generation")
     }
 
+    /// URL for the MCP config install marker file (written by safari-mcp-bridge --install,
+    /// read by the main app to detect successful config installation).
+    static var mcpConfigInstalledURL: URL? {
+        appGroupContainerURL?.appendingPathComponent("mcp_config_installed.json")
+    }
+
     // MARK: - Branding
     static let appDisplayName = "Claude in Safari"
     static let brandColorHex = "#D97757"
