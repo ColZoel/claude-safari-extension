@@ -26,6 +26,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         setupMenuBar()
         startMCPServer()
         checkAndShowOnboardingIfNeeded()
+        checkBridgePathMismatch()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
@@ -44,6 +45,8 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
             }
         }
         controller.onCheckConnection = { [weak self] in self?.checkConnection() }
+        controller.onInstallIntegration = { [weak self] in self?.runBridgeInstall() }
+        controller.onUninstallIntegration = { [weak self] in self?.runBridgeUninstall() }
         menuBarController = controller
     }
 
@@ -178,6 +181,129 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         completionHandler([.banner])
+    }
+
+    // MARK: - Claude Integration
+
+    private func runBridgeInstall() {
+        let bridgePath = Bundle.main.bundlePath + "/Contents/MacOS/safari-mcp-bridge"
+
+        if isSandboxed {
+            // Copy command to clipboard + open Terminal
+            let command = "\"\(bridgePath)\" --install --verify"
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(command, forType: .string)
+
+            let terminalURL = URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app")
+            NSWorkspace.shared.openApplication(at: terminalURL, configuration: NSWorkspace.OpenConfiguration()) { _, error in
+                if let error = error {
+                    NSLog("AppDelegate: failed to open Terminal — %@", error.localizedDescription)
+                }
+            }
+
+            let alert = NSAlert()
+            alert.messageText = "Install command copied"
+            alert.informativeText = "Paste (⌘V) in Terminal and press Enter to configure Claude Code and Desktop."
+            alert.alertStyle = .informational
+            alert.runModal()
+        } else {
+            // Run directly — on background queue to avoid blocking UI
+            DispatchQueue.global(qos: .userInitiated).async {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: bridgePath)
+                process.arguments = ["--install", "--verify"]
+                let pipe = Pipe()
+                process.standardOutput = pipe
+
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+
+                    DispatchQueue.main.async {
+                        let alert = NSAlert()
+                        if process.terminationStatus == 0 {
+                            alert.messageText = "Claude Integration installed"
+                            alert.informativeText = output
+                            alert.alertStyle = .informational
+                        } else {
+                            alert.messageText = "Installation failed"
+                            alert.informativeText = output
+                            alert.alertStyle = .warning
+                        }
+                        alert.runModal()
+                    }
+                } catch {
+                    NSLog("AppDelegate: failed to run bridge — %@", error.localizedDescription)
+                }
+            }
+        }
+    }
+
+    private func runBridgeUninstall() {
+        let bridgePath = Bundle.main.bundlePath + "/Contents/MacOS/safari-mcp-bridge"
+
+        if isSandboxed {
+            let command = "\"\(bridgePath)\" --uninstall"
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(command, forType: .string)
+
+            let terminalURL = URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app")
+            NSWorkspace.shared.openApplication(at: terminalURL, configuration: NSWorkspace.OpenConfiguration()) { _, _ in }
+
+            let alert = NSAlert()
+            alert.messageText = "Uninstall command copied"
+            alert.informativeText = "Paste (⌘V) in Terminal and press Enter."
+            alert.alertStyle = .informational
+            alert.runModal()
+        } else {
+            DispatchQueue.global(qos: .userInitiated).async {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: bridgePath)
+                process.arguments = ["--uninstall"]
+                let pipe = Pipe()
+                process.standardOutput = pipe
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                    DispatchQueue.main.async {
+                        let alert = NSAlert()
+                        alert.messageText = "Claude Integration removed"
+                        alert.informativeText = output
+                        alert.alertStyle = .informational
+                        alert.runModal()
+                    }
+                } catch {
+                    NSLog("AppDelegate: failed to run bridge uninstall — %@", error.localizedDescription)
+                }
+            }
+        }
+    }
+
+    /// Checks if the installed MCP config points to a stale bridge path (e.g., user moved the app).
+    private func checkBridgePathMismatch() {
+        guard let markerURL = AppConstants.mcpConfigInstalledURL,
+              FileManager.default.fileExists(atPath: markerURL.path),
+              let data = try? Data(contentsOf: markerURL),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let installedPath = json["bridge_path"] as? String else { return }
+
+        let currentPath = Bundle.main.bundlePath + "/Contents/MacOS/safari-mcp-bridge"
+        guard installedPath != currentPath else { return }
+
+        // Path mismatch — app was moved since last install
+        DispatchQueue.main.async { [weak self] in
+            let alert = NSAlert()
+            alert.messageText = "Claude Integration needs update"
+            alert.informativeText = "The app was moved since the MCP config was installed. Update the config to keep Claude Code connected."
+            alert.alertStyle = .informational
+            alert.addButton(withTitle: "Update Now")
+            alert.addButton(withTitle: "Later")
+            if alert.runModal() == .alertFirstButtonReturn {
+                self?.runBridgeInstall()
+            }
+        }
     }
 
     // MARK: - MCP Server

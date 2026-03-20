@@ -29,6 +29,14 @@ final class MenuBarController {
     // Called on the main thread (invoked from @objc action methods).
     var onCheckConnection: (() -> Void)?
 
+    /// Callback invoked when user taps "Install Claude Integration".
+    // Called on the main thread (invoked from @objc action methods).
+    var onInstallIntegration: (() -> Void)?
+
+    /// Callback invoked when user taps "Uninstall Claude Integration".
+    // Called on the main thread (invoked from @objc action methods).
+    var onUninstallIntegration: (() -> Void)?
+
     // MARK: Private
 
     private let statusItem: NSStatusItem
@@ -140,6 +148,9 @@ final class MenuBarController {
         case .connected:
             menu.addItem(makeItem("Open Setup Again", action: #selector(openSetup), symbol: "⚙️"))
             menu.addItem(makeItem("Open Safari", action: #selector(openSafari), symbol: "🧭"))
+            menu.addItem(.separator())
+            menu.addItem(makeItem("Install Claude Integration", action: #selector(installIntegration), symbol: "🔗"))
+            menu.addItem(makeItem("Uninstall Claude Integration", action: #selector(uninstallIntegration), symbol: nil))
 
         case .needsAttention:
             let fixItem = makeItem("Fix This →", action: #selector(openSetup), symbol: "🔧")
@@ -232,8 +243,10 @@ final class MenuBarController {
 
     // MARK: - Actions
 
-    @objc private func checkConnection() { onCheckConnection?() }
-    @objc private func openSetup()       { onOpenSetup?() }
+    @objc private func checkConnection()      { onCheckConnection?() }
+    @objc private func openSetup()            { onOpenSetup?() }
+    @objc private func installIntegration()   { onInstallIntegration?() }
+    @objc private func uninstallIntegration() { onUninstallIntegration?() }
     @objc private func openSafari() {
         let safariURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.Safari")
             ?? URL(fileURLWithPath: "/Applications/Safari.app")
