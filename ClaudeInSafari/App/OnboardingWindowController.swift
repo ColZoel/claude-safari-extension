@@ -370,9 +370,7 @@ final class OnboardingWindowController: NSWindowController {
                              width: Layout.windowWidth - Layout.padding * 2, height: 26)
         root.addSubview(title)
 
-        let isSandboxed = ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
-
-        if isSandboxed {
+        if AppConstants.isSandboxed {
             // App Store flow: copy command + open Terminal
             let body = makeLabel(
                 "One more step — connect this app to Claude Code and Claude Desktop so they can use Safari.",
@@ -428,7 +426,11 @@ final class OnboardingWindowController: NSWindowController {
 
         // Open Terminal
         let terminalURL = URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app")
-        NSWorkspace.shared.openApplication(at: terminalURL, configuration: NSWorkspace.OpenConfiguration()) { _, _ in }
+        NSWorkspace.shared.openApplication(at: terminalURL, configuration: NSWorkspace.OpenConfiguration()) { _, error in
+            if let error = error {
+                NSLog("OnboardingWindowController: failed to open Terminal — %@", error.localizedDescription)
+            }
+        }
 
         // Start polling for marker file
         startMarkerPolling()
@@ -443,15 +445,19 @@ final class OnboardingWindowController: NSWindowController {
             process.executableURL = URL(fileURLWithPath: bridgePath)
             process.arguments = ["--install", "--verify"]
 
-            let pipe = Pipe()
-            process.standardOutput = pipe
+            let stdoutPipe = Pipe()
+            let stderrPipe = Pipe()
+            process.standardOutput = stdoutPipe
+            process.standardError = stderrPipe
 
             do {
                 try process.run()
                 process.waitUntilExit()
 
-                let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-                NSLog("safari-mcp-bridge --install output: %@", output)
+                let stdout = String(data: stdoutPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                let stderr = String(data: stderrPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                NSLog("safari-mcp-bridge --install stdout: %@", stdout)
+                if !stderr.isEmpty { NSLog("safari-mcp-bridge --install stderr: %@", stderr) }
 
                 DispatchQueue.main.async {
                     if process.terminationStatus == 0 {
@@ -460,6 +466,7 @@ final class OnboardingWindowController: NSWindowController {
                             self?.advance()
                         }
                     } else {
+                        let output = stderr.isEmpty ? stdout : "\(stdout)\n\(stderr)"
                         let alert = NSAlert()
                         alert.messageText = "Installation failed"
                         alert.informativeText = output
@@ -469,11 +476,23 @@ final class OnboardingWindowController: NSWindowController {
                 }
             } catch {
                 NSLog("Failed to run safari-mcp-bridge: %@", error.localizedDescription)
+                DispatchQueue.main.async {
+                    let alert = NSAlert()
+                    alert.messageText = "Failed to run installer"
+                    alert.informativeText = "Could not launch safari-mcp-bridge: \(error.localizedDescription)"
+                    alert.alertStyle = .critical
+                    alert.runModal()
+                }
             }
         }
     }
 
     @objc private func skipConnect() { advance() }
+
+    /// Maximum time (seconds) to wait for the marker file before showing a timeout message.
+    private static let markerPollingTimeout: TimeInterval = 120
+
+    private var markerPollingStart: Date?
 
     private func startMarkerPolling() {
         // Show detecting row
@@ -482,6 +501,8 @@ final class OnboardingWindowController: NSWindowController {
         }) {
             detectingRow.isHidden = false
         }
+
+        markerPollingStart = Date()
 
         // Poll the marker file every 2 seconds
         pollTimer?.invalidate()
@@ -493,6 +514,25 @@ final class OnboardingWindowController: NSWindowController {
                FileManager.default.fileExists(atPath: url.path) {
                 self.stopPolling()
                 self.advance()
+                return
+            }
+
+            // Timeout — update detecting row with helpful message
+            if let start = self.markerPollingStart,
+               Date().timeIntervalSince(start) > Self.markerPollingTimeout {
+                self.stopPolling()
+                if let detectingRow = self.window?.contentView?.subviews.first(where: {
+                    $0.identifier == NSUserInterfaceItemIdentifier("connectDetecting")
+                }) {
+                    // Replace spinner with timeout message
+                    detectingRow.subviews.forEach { $0.removeFromSuperview() }
+                    let label = NSTextField(labelWithString: "Installation not detected. You can try again or skip this step.")
+                    label.font = NSFont.systemFont(ofSize: 12)
+                    label.textColor = .secondaryLabelColor
+                    label.frame = NSRect(x: 8, y: 8, width: Layout.windowWidth - Layout.padding * 2 - 16, height: 16)
+                    detectingRow.layer?.backgroundColor = NSColor.controlBackgroundColor.cgColor
+                    detectingRow.addSubview(label)
+                }
             }
         }
     }

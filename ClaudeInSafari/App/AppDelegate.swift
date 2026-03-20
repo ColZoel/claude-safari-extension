@@ -13,12 +13,6 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private var monitorTimer: Timer?
     private let permissionMonitor = PermissionMonitor()
 
-    /// True when running inside App Sandbox (App Store build).
-    /// DMG builds are unsandboxed and can launch the bridge binary directly.
-    private var isSandboxed: Bool {
-        ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
-    }
-
     // MARK: - Lifecycle
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -188,7 +182,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private func runBridgeInstall() {
         let bridgePath = Bundle.main.bundlePath + "/Contents/MacOS/safari-mcp-bridge"
 
-        if isSandboxed {
+        if AppConstants.isSandboxed {
             // Copy command to clipboard + open Terminal
             let command = "\"\(bridgePath)\" --install --verify"
             NSPasteboard.general.clearContents()
@@ -212,19 +206,23 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: bridgePath)
                 process.arguments = ["--install", "--verify"]
-                let pipe = Pipe()
-                process.standardOutput = pipe
+                let stdoutPipe = Pipe()
+                let stderrPipe = Pipe()
+                process.standardOutput = stdoutPipe
+                process.standardError = stderrPipe
 
                 do {
                     try process.run()
                     process.waitUntilExit()
-                    let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                    let stdout = String(data: stdoutPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                    let stderr = String(data: stderrPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                    let output = stderr.isEmpty ? stdout : "\(stdout)\n\(stderr)"
 
                     DispatchQueue.main.async {
                         let alert = NSAlert()
                         if process.terminationStatus == 0 {
                             alert.messageText = "Claude Integration installed"
-                            alert.informativeText = output
+                            alert.informativeText = stdout
                             alert.alertStyle = .informational
                         } else {
                             alert.messageText = "Installation failed"
@@ -235,6 +233,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                     }
                 } catch {
                     NSLog("AppDelegate: failed to run bridge — %@", error.localizedDescription)
+                    DispatchQueue.main.async {
+                        let alert = NSAlert()
+                        alert.messageText = "Failed to run installer"
+                        alert.informativeText = "Could not launch safari-mcp-bridge: \(error.localizedDescription)"
+                        alert.alertStyle = .critical
+                        alert.runModal()
+                    }
                 }
             }
         }
@@ -243,13 +248,17 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private func runBridgeUninstall() {
         let bridgePath = Bundle.main.bundlePath + "/Contents/MacOS/safari-mcp-bridge"
 
-        if isSandboxed {
+        if AppConstants.isSandboxed {
             let command = "\"\(bridgePath)\" --uninstall"
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(command, forType: .string)
 
             let terminalURL = URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app")
-            NSWorkspace.shared.openApplication(at: terminalURL, configuration: NSWorkspace.OpenConfiguration()) { _, _ in }
+            NSWorkspace.shared.openApplication(at: terminalURL, configuration: NSWorkspace.OpenConfiguration()) { _, error in
+                if let error = error {
+                    NSLog("AppDelegate: failed to open Terminal — %@", error.localizedDescription)
+                }
+            }
 
             let alert = NSAlert()
             alert.messageText = "Uninstall command copied"
@@ -261,12 +270,16 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: bridgePath)
                 process.arguments = ["--uninstall"]
-                let pipe = Pipe()
-                process.standardOutput = pipe
+                let stdoutPipe = Pipe()
+                let stderrPipe = Pipe()
+                process.standardOutput = stdoutPipe
+                process.standardError = stderrPipe
                 do {
                     try process.run()
                     process.waitUntilExit()
-                    let output = String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                    let stdout = String(data: stdoutPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                    let stderr = String(data: stderrPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+                    let output = stderr.isEmpty ? stdout : "\(stdout)\n\(stderr)"
                     DispatchQueue.main.async {
                         let alert = NSAlert()
                         alert.messageText = "Claude Integration removed"
@@ -276,6 +289,13 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
                     }
                 } catch {
                     NSLog("AppDelegate: failed to run bridge uninstall — %@", error.localizedDescription)
+                    DispatchQueue.main.async {
+                        let alert = NSAlert()
+                        alert.messageText = "Failed to run uninstaller"
+                        alert.informativeText = "Could not launch safari-mcp-bridge: \(error.localizedDescription)"
+                        alert.alertStyle = .critical
+                        alert.runModal()
+                    }
                 }
             }
         }

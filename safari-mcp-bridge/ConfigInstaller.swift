@@ -140,14 +140,23 @@ enum ConfigInstaller {
             "clients": clients
         ]
 
-        if let data = try? JSONSerialization.data(withJSONObject: marker, options: [.prettyPrinted, .sortedKeys]) {
-            try? data.write(to: URL(fileURLWithPath: path), options: .atomic)
+        do {
+            let data = try JSONSerialization.data(withJSONObject: marker, options: [.prettyPrinted, .sortedKeys])
+            try data.write(to: URL(fileURLWithPath: path), options: .atomic)
+        } catch {
+            fputs("Warning: failed to write marker file at \(path): \(error.localizedDescription)\n", stderr)
         }
     }
 
     /// Removes the marker file. `markerPath` is overridable for testing.
     static func removeMarkerFile(markerPath: String? = nil) {
         let path = markerPath ?? defaultMarkerPath
-        try? FileManager.default.removeItem(atPath: path)
+        do {
+            try FileManager.default.removeItem(atPath: path)
+        } catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileNoSuchFileError {
+            // File doesn't exist — nothing to remove, not an error
+        } catch {
+            fputs("Warning: failed to remove marker file at \(path): \(error.localizedDescription)\n", stderr)
+        }
     }
 }
