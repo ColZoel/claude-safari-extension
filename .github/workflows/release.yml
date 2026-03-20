@@ -37,6 +37,7 @@ jobs:
           xcodebuild build \
             -project ClaudeInSafari.xcodeproj \
             -scheme ClaudeInSafari \
+            -configuration Release \
             -destination "platform=macOS" \
             -derivedDataPath build/DerivedData \
             CODE_SIGN_IDENTITY="" \
@@ -102,14 +103,29 @@ jobs:
           # Package for submission
           ditto -c -k --sequesterRsrc --keepParent "$APP_PATH" /tmp/app-for-notarization.zip
 
-          xcrun notarytool submit /tmp/app-for-notarization.zip \
+          # Submit and capture the submission ID
+          SUBMIT_OUT=$(xcrun notarytool submit /tmp/app-for-notarization.zip \
             --apple-id "$APPLE_ID" \
             --password "$APP_PASSWORD" \
             --team-id "$TEAM_ID" \
             --wait \
-            --timeout 600
+            --timeout 600 2>&1) || true
+          echo "$SUBMIT_OUT"
 
-          xcrun stapler staple "$APP_PATH"
+          SUB_ID=$(echo "$SUBMIT_OUT" | grep "id:" | head -1 | awk '{print $2}')
+
+          # Check if notarization succeeded
+          if echo "$SUBMIT_OUT" | grep -q "status: Accepted"; then
+            xcrun stapler staple "$APP_PATH"
+          else
+            echo "::error::Notarization failed. Fetching rejection log..."
+            xcrun notarytool log "$SUB_ID" \
+              --apple-id "$APPLE_ID" \
+              --password "$APP_PASSWORD" \
+              --team-id "$TEAM_ID" || true
+            exit 1
+          fi
+
           rm /tmp/app-for-notarization.zip
 
       # ── DMG creation ───────────────────────────────────────────────────────
