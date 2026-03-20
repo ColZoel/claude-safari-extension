@@ -14,11 +14,13 @@
 		178CDADAE3624CE23D341758 /* BridgeRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEB7A90EAC096AE3069D4C81 /* BridgeRelay.swift */; };
 		17B3B58D3BC5E156E6A235D7 /* BridgeRelay.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEB7A90EAC096AE3069D4C81 /* BridgeRelay.swift */; };
 		257435801FBA70A001BC58B6 /* GifServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07542CB361F8FE6B0E4A5558 /* GifServiceTests.swift */; };
+		26AF68C886B4BF87CE195E7F /* StatusReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108E5095AC6990C7FB7C1B1B /* StatusReporter.swift */; };
 		2C8D97C719B2C8ABC14F61DA /* ToolRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4D8BEC346192E189913F39 /* ToolRouter.swift */; };
 		2E19B15D715BBC43C9DBFF32 /* MCPMessageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7A729444DE88ABCACE1FBD2 /* MCPMessageTests.swift */; };
 		30EB2D0811612DBB6A50EF32 /* FileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 658074861C8C0C7933646343 /* FileService.swift */; };
 		3E3A0B200C0A287DA885E7A5 /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1D372117A4FF27A236BD5F8 /* Constants.swift */; };
 		426CF3A158FF421539D89FA8 /* MenuBarControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52B4B49AEA85FF580ED042AE /* MenuBarControllerTests.swift */; };
+		4D2E17B40AE0230AD251FC06 /* StatusReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 108E5095AC6990C7FB7C1B1B /* StatusReporter.swift */; };
 		50788C66B072DEF05E5A9A64 /* FileServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C557C15A842E784429478650 /* FileServiceTests.swift */; };
 		510D908978BEE48EC9D3DCFA /* ScreenshotServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BB305C7A1C4A31221830ABC /* ScreenshotServiceTests.swift */; };
 		5BF79D7662D53EA3EE5DECD8 /* ToolRouterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4F410276953CA7D55B48FF36 /* ToolRouterTests.swift */; };
@@ -110,6 +112,7 @@
 		02AD4E6F8C9D0E1F2A3B4C5D /* AppDelegateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegateTests.swift; sourceTree = "<group>"; };
 		02B361326E8F2C467CF43011 /* AppleScriptBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleScriptBridge.swift; sourceTree = "<group>"; };
 		07542CB361F8FE6B0E4A5558 /* GifServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GifServiceTests.swift; sourceTree = "<group>"; };
+		108E5095AC6990C7FB7C1B1B /* StatusReporter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StatusReporter.swift; sourceTree = "<group>"; };
 		14596A1FC6A28D35A07C800E /* ClaudeInSafari.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClaudeInSafari.entitlements; sourceTree = "<group>"; };
 		1A4AF7CE0CF1BE8B0E8B873E /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		3C6A1743F9A8F1A1B1BBFDE4 /* PermissionMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionMonitor.swift; sourceTree = "<group>"; };
@@ -324,6 +327,7 @@
 				B36043F3C22F5C5108491897 /* main.swift */,
 				DEB7A90EAC096AE3069D4C81 /* BridgeRelay.swift */,
 				D340BB0D1514BEC23070ADE4 /* ConfigInstaller.swift */,
+				108E5095AC6990C7FB7C1B1B /* StatusReporter.swift */,
 			);
 			name = "safari-mcp-bridge";
 			path = "safari-mcp-bridge";
@@ -523,6 +527,7 @@
 				85E406993AE6C81DD74F1B0E /* main.swift in Sources */,
 				17B3B58D3BC5E156E6A235D7 /* BridgeRelay.swift in Sources */,
 				164E0EB6900394F907D8EA10 /* ConfigInstaller.swift in Sources */,
+				26AF68C886B4BF87CE195E7F /* StatusReporter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -533,6 +538,7 @@
 				B04AE25841439136219583A5 /* main.swift in Sources */,
 				178CDADAE3624CE23D341758 /* BridgeRelay.swift in Sources */,
 				D8E4417585510407A78489A5 /* ConfigInstaller.swift in Sources */,
+				4D2E17B40AE0230AD251FC06 /* StatusReporter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

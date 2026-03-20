@@ -78,9 +78,8 @@ case "--uninstall":
     print("\nDone! MCP config removed.")
     exit(0)
 case "--status":
-    // TODO: Task 5
-    print("--status not yet implemented")
-    exit(1)
+    StatusReporter.printStatus()
+    exit(0)
 case nil:
     BridgeRelay.run()
 default:
