@@ -13,6 +13,12 @@ class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDele
     private var monitorTimer: Timer?
     private let permissionMonitor = PermissionMonitor()
 
+    /// True when running inside App Sandbox (App Store build).
+    /// DMG builds are unsandboxed and can launch the bridge binary directly.
+    private var isSandboxed: Bool {
+        ProcessInfo.processInfo.environment["APP_SANDBOX_CONTAINER_ID"] != nil
+    }
+
     // MARK: - Lifecycle
 
     func applicationDidFinishLaunching(_ notification: Notification) {
