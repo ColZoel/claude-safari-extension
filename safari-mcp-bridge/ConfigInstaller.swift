@@ -123,9 +123,11 @@ enum ConfigInstaller {
     }
 
     /// Default marker file path in the App Group container.
+    /// Hardcoded path pattern because the bridge binary lacks the app group entitlement
+    /// (same rationale as BridgeRelay.socketDirectory).
     static var defaultMarkerPath: String {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
-        return "\(home)/Library/Group Containers/group.com.chriscantu.claudeinsafari/mcp_config_installed.json"
+        return "\(home)/Library/Group Containers/\(AppConstants.appGroupId)/mcp_config_installed.json"
     }
 
     /// Writes a marker file so the main app can detect successful installation.

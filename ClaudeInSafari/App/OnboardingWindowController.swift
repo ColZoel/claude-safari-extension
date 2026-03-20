@@ -418,8 +418,7 @@ final class OnboardingWindowController: NSWindowController {
     }
 
     @objc private func copyAndOpenTerminal() {
-        let bridgePath = Bundle.main.bundlePath + "/Contents/MacOS/safari-mcp-bridge"
-        let command = "\"\(bridgePath)\" --install --verify"
+        let command = "\"\(AppConstants.bridgeBinaryPath)\" --install --verify"
 
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(command, forType: .string)
@@ -437,52 +436,14 @@ final class OnboardingWindowController: NSWindowController {
     }
 
     @objc private func runInstallDirectly() {
-        let bridgePath = Bundle.main.bundlePath + "/Contents/MacOS/safari-mcp-bridge"
-
-        // Run on background queue to avoid blocking UI
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: bridgePath)
-            process.arguments = ["--install", "--verify"]
-
-            let stdoutPipe = Pipe()
-            let stderrPipe = Pipe()
-            process.standardOutput = stdoutPipe
-            process.standardError = stderrPipe
-
-            do {
-                try process.run()
-                process.waitUntilExit()
-
-                let stdout = String(data: stdoutPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-                let stderr = String(data: stderrPipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
-                NSLog("safari-mcp-bridge --install stdout: %@", stdout)
-                if !stderr.isEmpty { NSLog("safari-mcp-bridge --install stderr: %@", stderr) }
-
-                DispatchQueue.main.async {
-                    if process.terminationStatus == 0 {
-                        // Success — advance after brief delay for user to see result
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            self?.advance()
-                        }
-                    } else {
-                        let output = stderr.isEmpty ? stdout : "\(stdout)\n\(stderr)"
-                        let alert = NSAlert()
-                        alert.messageText = "Installation failed"
-                        alert.informativeText = output
-                        alert.alertStyle = .warning
-                        alert.runModal()
-                    }
-                }
-            } catch {
-                NSLog("Failed to run safari-mcp-bridge: %@", error.localizedDescription)
-                DispatchQueue.main.async {
-                    let alert = NSAlert()
-                    alert.messageText = "Failed to run installer"
-                    alert.informativeText = "Could not launch safari-mcp-bridge: \(error.localizedDescription)"
-                    alert.alertStyle = .critical
-                    alert.runModal()
-                }
+        // Reuse the shared bridge runner; advance onboarding on success
+        AppDelegate.runBridge(
+            arguments: ["--install", "--verify"],
+            successTitle: "Claude Integration installed",
+            failureTitle: "Installation failed"
+        ) { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self?.advance()
             }
         }
     }

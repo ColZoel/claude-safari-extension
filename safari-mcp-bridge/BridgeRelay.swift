@@ -5,12 +5,12 @@ import Foundation
 enum BridgeRelay {
 
     /// App Group container socket directory path.
-    /// Hardcoded rather than using FileManager.containerURL(forSecurityApplicationGroupIdentifier:)
-    /// because that API requires the app group entitlement, which the bridge binary intentionally
-    /// does not have (it runs unsandboxed as a subprocess of Claude Code/Desktop).
+    /// Uses a hardcoded path pattern rather than FileManager.containerURL(forSecurityApplicationGroupIdentifier:)
+    /// because that API returns nil without the app group entitlement. The bridge binary intentionally
+    /// has no entitlements (it runs unsandboxed as a subprocess of Claude Code/Desktop).
     static let socketDirectory: String = {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
-        return "\(home)/Library/Group Containers/group.com.chriscantu.claudeinsafari/sockets"
+        return "\(home)/Library/Group Containers/\(AppConstants.appGroupId)/sockets"
     }()
 
     /// Finds the newest *.sock file in the given directory by modification time.
@@ -101,6 +101,7 @@ enum BridgeRelay {
                     if w <= 0 {
                         fputs("Bridge: write to socket failed: \(String(cString: strerror(errno)))\n", stderr)
                         stdinRelayError = true
+                        shutdown(fd, SHUT_WR) // unblock socket→stdout read
                         group.leave()
                         return
                     }
