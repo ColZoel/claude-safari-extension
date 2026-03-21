@@ -83,7 +83,11 @@ enum BridgeRelay {
             exit(1)
         }
 
-        setbuf(stdout, nil) // MCP requires unbuffered output
+        // Use raw file descriptors for stdin/stdout to avoid stdio buffering issues.
+        // fwrite/fflush to stdout on GCD threads does not reliably flush when stdout
+        // is a pipe (as when spawned by Claude Code). Raw write() bypasses this entirely.
+        let stdinFD = fileno(stdin)
+        let stdoutFD = fileno(stdout)
 
         let group = DispatchGroup()
         let errorLock = NSLock()
@@ -96,12 +100,21 @@ enum BridgeRelay {
             let buf = UnsafeMutablePointer<UInt8>.allocate(capacity: bufSize)
             defer { buf.deallocate() }
             while true {
-                let n = fread(buf, 1, bufSize, stdin)
-                if n <= 0 { break }
+                let n = Darwin.read(stdinFD, buf, bufSize)
+                if n == 0 { break } // EOF — stdin closed normally
+                if n < 0 {
+                    if errno == EINTR { continue }
+                    fputs("Bridge: read from stdin failed: \(String(cString: strerror(errno)))\n", stderr)
+                    errorLock.lock()
+                    hadError = true
+                    errorLock.unlock()
+                    break
+                }
                 var written = 0
                 while written < n {
                     let w = Darwin.write(fd, buf.advanced(by: written), n - written)
-                    if w <= 0 {
+                    if w < 0 {
+                        if errno == EINTR { continue }
                         fputs("Bridge: write to socket failed: \(String(cString: strerror(errno)))\n", stderr)
                         errorLock.lock()
                         hadError = true
@@ -110,6 +123,7 @@ enum BridgeRelay {
                         group.leave()
                         return
                     }
+                    if w == 0 { break }
                     written += w
                 }
             }
@@ -125,11 +139,20 @@ enum BridgeRelay {
             defer { buf.deallocate() }
             while true {
                 let n = Darwin.read(fd, buf, bufSize)
-                if n <= 0 { break }
+                if n == 0 { break } // EOF — socket closed normally
+                if n < 0 {
+                    if errno == EINTR { continue }
+                    fputs("Bridge: read from socket failed: \(String(cString: strerror(errno)))\n", stderr)
+                    errorLock.lock()
+                    hadError = true
+                    errorLock.unlock()
+                    break
+                }
                 var written = 0
                 while written < n {
-                    let w = fwrite(buf.advanced(by: written), 1, n - written, stdout)
-                    if w <= 0 {
+                    let w = Darwin.write(stdoutFD, buf.advanced(by: written), n - written)
+                    if w < 0 {
+                        if errno == EINTR { continue }
                         fputs("Bridge: write to stdout failed: \(String(cString: strerror(errno)))\n", stderr)
                         errorLock.lock()
                         hadError = true
@@ -137,8 +160,8 @@ enum BridgeRelay {
                         group.leave()
                         return
                     }
+                    if w == 0 { break }
                     written += w
-                    fflush(stdout)
                 }
             }
             group.leave()

@@ -501,7 +501,7 @@ final class OnboardingWindowController: NSWindowController {
 
     // MARK: Done
 
-    static let examplePrompt = "Go to news.ycombinator.com and tell me what the top 5 stories are about"
+    static let examplePrompt = "Open news.ycombinator.com in Safari and tell me what the top 5 stories are about"
 
     private func buildDoneView() -> NSView {
         let root = paddedRoot()
@@ -516,7 +516,7 @@ final class OnboardingWindowController: NSWindowController {
         title.frame = NSRect(x: Layout.padding, y: checkIcon.frame.minY - 42, width: Layout.windowWidth - Layout.padding * 2, height: 30)
         root.addSubview(title)
 
-        let body = makeLabel("Claude Code can now use Safari. Look for the robot icon in your menu bar whenever the connection is active.", size: 13, weight: .regular, color: .secondaryLabelColor, wraps: true)
+        let body = makeLabel("Restart Claude Code or Claude Desktop to connect, then try the example below.", size: 13, weight: .regular, color: .secondaryLabelColor, wraps: true)
         body.alignment = .center
         body.frame = NSRect(x: Layout.padding, y: title.frame.minY - 52, width: Layout.windowWidth - Layout.padding * 2, height: 44)
         root.addSubview(body)
