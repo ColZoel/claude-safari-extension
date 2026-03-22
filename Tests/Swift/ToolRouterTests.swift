@@ -11,6 +11,7 @@ class MockMCPSocketServer: MCPSocketServer {
         guard let last = sentData.last else { return nil }
         return try? JSONSerialization.jsonObject(with: last) as? [String: Any]
     }
+    func sentCount() -> Int { sentData.count }
 }
 
 // MARK: - ToolRouterTests
@@ -964,12 +965,15 @@ final class ToolRouterDispatchTests: XCTestCase {
         let requestId = "nil-gen-test"
         router.injectPendingRequest(requestId: requestId, clientId: "test-client", jsonrpcId: 43)
 
-        router.pollForExtensionResponse(requestId: requestId, deadline: Date().addingTimeInterval(0.15),
+        // Deadline shorter than fallbackPollIntervalSeconds (0.5s), so the deadline
+        // expires on the first recursive poll invocation. Wait > deadline + poll interval
+        // to ensure the timeout error is delivered before we assert.
+        router.pollForExtensionResponse(requestId: requestId, deadline: Date().addingTimeInterval(0.1),
                                                 generationSnapshot: nil)
 
         let expectation = XCTestExpectation(description: "Poll times out normally")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { expectation.fulfill() }
-        wait(for: [expectation], timeout: 1.0)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { expectation.fulfill() }
+        wait(for: [expectation], timeout: 2.0)
 
         let json = mockServer.lastSentJSON()
         let errorMsg = (json?["error"] as? [String: Any])?["message"] as? String ?? ""
@@ -1070,5 +1074,117 @@ final class ToolRouterDispatchTests: XCTestCase {
         ]
         XCTAssertEqual(ToolRouter.executeScriptToolsForTesting, expected,
                        "executeScriptTools is out of sync — update it when adding new executeScript-based tools")
+    }
+
+    // MARK: - Fallback Poll Interval (Spec 029 Change 3)
+
+    func testPollForExtensionResponse_fallbackInterval_is500ms() throws {
+        XCTAssertEqual(ToolRouter.fallbackPollIntervalSeconds, 0.5,
+                       "Fallback poll should be 500ms, not 50ms")
+    }
+
+    // MARK: - Darwin Notification Response Delivery (Spec 029 Change 3)
+
+    func testCheckAllPendingResponses_deliversReadyResponse() throws {
+        guard let dir = AppConstants.responsesDirectoryURL else {
+            throw XCTSkip("App Group unavailable in test environment")
+        }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
+        let mockServer = MockMCPSocketServer()
+        let router = ToolRouter(
+            screenshotService: ScreenshotService(),
+            gifService: GifService(),
+            fileService: FileService()
+        )
+        router.setServer(mockServer)
+
+        let requestId = "darwin-test-1"
+        router.injectPendingRequest(requestId: requestId, clientId: "test-client", jsonrpcId: 50)
+
+        let responseFile = dir.appendingPathComponent("\(requestId).json")
+        let response: [String: Any] = [
+            "requestId": requestId,
+            "result": ["content": [["type": "text", "text": "darwin delivery"]]]
+        ]
+        let data = try JSONSerialization.data(withJSONObject: response)
+        try data.write(to: responseFile, options: .atomic)
+        addTeardownBlock { try? FileManager.default.removeItem(at: responseFile) }
+
+        router.checkAllPendingResponses()
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: responseFile.path),
+                        "Response file should be consumed")
+
+        let json = mockServer.lastSentJSON()
+        XCTAssertNotNil(json, "Should have sent MCP response")
+    }
+
+    func testCheckAllPendingResponses_handlesMultipleReadyResponses() throws {
+        guard let dir = AppConstants.responsesDirectoryURL else {
+            throw XCTSkip("App Group unavailable in test environment")
+        }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
+        let mockServer = MockMCPSocketServer()
+        let router = ToolRouter(
+            screenshotService: ScreenshotService(),
+            gifService: GifService(),
+            fileService: FileService()
+        )
+        router.setServer(mockServer)
+
+        router.injectPendingRequest(requestId: "multi-1", clientId: "client-a", jsonrpcId: 51)
+        router.injectPendingRequest(requestId: "multi-2", clientId: "client-a", jsonrpcId: 52)
+
+        for reqId in ["multi-1", "multi-2"] {
+            let file = dir.appendingPathComponent("\(reqId).json")
+            let resp: [String: Any] = [
+                "requestId": reqId,
+                "result": ["content": [["type": "text", "text": "ok"]]]
+            ]
+            try JSONSerialization.data(withJSONObject: resp).write(to: file, options: .atomic)
+            addTeardownBlock { try? FileManager.default.removeItem(at: file) }
+        }
+
+        router.checkAllPendingResponses()
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: dir.appendingPathComponent("multi-1.json").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: dir.appendingPathComponent("multi-2.json").path))
+        XCTAssertEqual(mockServer.sentCount(), 2)
+    }
+
+    func testCheckAllPendingResponses_calledTwice_deliversOnlyOnce() throws {
+        guard let dir = AppConstants.responsesDirectoryURL else {
+            throw XCTSkip("App Group unavailable in test environment")
+        }
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+
+        let mockServer = MockMCPSocketServer()
+        let router = ToolRouter(
+            screenshotService: ScreenshotService(),
+            gifService: GifService(),
+            fileService: FileService()
+        )
+        router.setServer(mockServer)
+
+        let requestId = "double-delivery-guard"
+        router.injectPendingRequest(requestId: requestId, clientId: "test-client", jsonrpcId: 60)
+
+        let responseFile = dir.appendingPathComponent("\(requestId).json")
+        let response: [String: Any] = [
+            "requestId": requestId,
+            "result": ["content": [["type": "text", "text": "once only"]]]
+        ]
+        let data = try JSONSerialization.data(withJSONObject: response)
+        try data.write(to: responseFile, options: .atomic)
+        addTeardownBlock { try? FileManager.default.removeItem(at: responseFile) }
+
+        // Call twice — simulates Darwin notification and fallback poll racing
+        router.checkAllPendingResponses()
+        router.checkAllPendingResponses()
+
+        // Only one MCP response should have been sent
+        XCTAssertEqual(mockServer.sentCount(), 1, "Double call should deliver only once")
     }
 }

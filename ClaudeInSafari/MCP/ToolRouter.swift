@@ -81,6 +81,8 @@ class ToolRouter: MCPSocketServerDelegate {
         }
 
         NSLog("ToolRouter: startup cleanup complete")
+
+        registerDarwinObserver()
     }
 
     /// Read the current extension generation marker from the App Group file.
@@ -89,6 +91,80 @@ class ToolRouter: MCPSocketServerDelegate {
         guard let url = AppConstants.extensionGenerationURL,
               let data = try? Data(contentsOf: url) else { return nil }
         return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Check all pending requests for available response files and deliver any that exist.
+    /// Called by the Darwin notification callback and the fallback poll timer.
+    func checkAllPendingResponses() {
+        pendingRequestsLock.lock()
+        let requestIds = Array(pendingRequests.keys)
+        pendingRequestsLock.unlock()
+
+        for requestId in requestIds {
+            guard let fileURL = AppConstants.responseFileURL(for: requestId) else {
+                NSLog("ToolRouter: checkAllPendingResponses — responseFileURL is nil for %@ (App Group unavailable)", requestId)
+                continue
+            }
+            guard let data = try? Data(contentsOf: fileURL),
+                  let responseString = String(data: data, encoding: .utf8) else { continue }
+
+            do {
+                try FileManager.default.removeItem(at: fileURL)
+            } catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileNoSuchFileError {
+                // Already deleted by fallback poll — not an error
+            } catch {
+                NSLog("ToolRouter: failed to delete response file for %@ in checkAllPendingResponses: %@", requestId, error.localizedDescription)
+            }
+
+            pendingRequestsLock.lock()
+            let pending = pendingRequests.removeValue(forKey: requestId)
+            let toolCtx = pendingToolContext.removeValue(forKey: requestId)
+            pendingRequestsLock.unlock()
+
+            if let pending = pending {
+                NSLog("ToolRouter: response for %@ delivered via notification", requestId)
+                deliverExtensionResponse(
+                    responseString, id: pending.jsonrpcId, to: pending.clientId,
+                    toolName: toolCtx?.toolName ?? "",
+                    arguments: toolCtx?.arguments ?? [:]
+                )
+            }
+        }
+    }
+
+    /// Subscribe to the cross-process Darwin notification for response delivery.
+    private func registerDarwinObserver() {
+        guard darwinObserverPtr == nil else { return }
+        let center = CFNotificationCenterGetDarwinNotifyCenter()
+        let name = "com.chriscantu.claudeinsafari.response-ready" as CFString
+        darwinObserverPtr = Unmanaged.passUnretained(self).toOpaque()
+
+        CFNotificationCenterAddObserver(
+            center, darwinObserverPtr,
+            { _, observer, _, _, _ in
+                guard let observer = observer else { return }
+                let router = Unmanaged<ToolRouter>.fromOpaque(observer).takeUnretainedValue()
+                router.responseQueue.async {
+                    router.checkAllPendingResponses()
+                }
+            },
+            name, nil, .deliverImmediately
+        )
+        NSLog("ToolRouter: Darwin notification observer registered")
+    }
+
+    /// Unsubscribe from the Darwin notification. Called from stop(), not deinit.
+    private func removeDarwinObserver() {
+        guard let ptr = darwinObserverPtr else { return }
+        let center = CFNotificationCenterGetDarwinNotifyCenter()
+        CFNotificationCenterRemoveObserver(center, ptr, nil, nil)
+        darwinObserverPtr = nil
+        NSLog("ToolRouter: Darwin notification observer removed")
+    }
+
+    /// Tear down: remove Darwin observer.
+    func stop() {
+        removeDarwinObserver()
     }
 
     /// Staging set for native tools whose handler branch is not yet wired up in handleToolCall().
@@ -104,9 +180,19 @@ class ToolRouter: MCPSocketServerDelegate {
     private var pendingToolContext = [String: (toolName: String, arguments: [String: Any])]()
     private let pendingRequestsLock = NSLock()
 
+    /// Serial queue for Darwin notification callbacks.
+    private let responseQueue = DispatchQueue(label: "com.chriscantu.claudeinsafari.response")
+
+    /// Opaque pointer to self for Darwin notification registration/removal.
+    private var darwinObserverPtr: UnsafeMutableRawPointer?
+
     // MARK: - Notification state
     /// Minimum interval (seconds) between successive automation notifications.
     private static let notificationDebounceInterval: TimeInterval = 10
+
+    /// Fallback poll interval for response file checking (seconds).
+    /// 500ms: belt-and-suspenders behind Darwin notification (Spec 029 Change 3).
+    static let fallbackPollIntervalSeconds: TimeInterval = 0.5
 
     /// Date of the last automation notification. Internal for testability (manipulated in tests).
     /// All reads and writes — including in test code — must be performed under `pendingRequestsLock`.
@@ -818,6 +904,7 @@ class ToolRouter: MCPSocketServerDelegate {
             let toolCtx = pendingToolContext.removeValue(forKey: requestId)
             pendingRequestsLock.unlock()
             if let pending = pending {
+                NSLog("ToolRouter: response for %@ delivered via fallback poll", requestId)
                 deliverExtensionResponse(
                     responseString, id: pending.jsonrpcId, to: pending.clientId,
                     toolName: toolCtx?.toolName ?? "",
@@ -849,7 +936,7 @@ class ToolRouter: MCPSocketServerDelegate {
         pendingRequestsLock.unlock()
         guard isActive else { return }
 
-        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 0.05) { [weak self] in
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + Self.fallbackPollIntervalSeconds) { [weak self] in
             self?.pollForExtensionResponse(requestId: requestId, deadline: deadline,
                                             generationSnapshot: generationSnapshot)
         }
