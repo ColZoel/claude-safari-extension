@@ -152,3 +152,71 @@ jobs:
           # xcodebuild exited on its own
           cat /tmp/xc-test.log
           wait $XC_PID 2>/dev/null
+
+      - name: Validate bridge binary
+        id: find-bridge
+        run: |
+          set -euo pipefail
+          BRIDGE=$(find ~/Library/Developer/Xcode/DerivedData -path "*/Build/Products/*/safari-mcp-bridge" -type f 2>/dev/null | head -1)
+          if [ -z "$BRIDGE" ]; then
+            echo "::error::safari-mcp-bridge not found in build output"
+            exit 1
+          fi
+          echo "Found bridge: $BRIDGE"
+          echo "bridge_path=$BRIDGE" >> "$GITHUB_OUTPUT"
+          python3 scripts/validate-bridge.py --check-binary "$BRIDGE"
+
+      - name: Validate config installer round-trip
+        run: |
+          set -euo pipefail
+          BRIDGE="${{ steps.find-bridge.outputs.bridge_path }}"
+          # Swift's FileManager.homeDirectoryForCurrentUser ignores $HOME env var
+          # on macOS, so we must use the real home directory. Create the detection
+          # directories the bridge looks for, and clean up after.
+          REAL_HOME=$(python3 -c "from pathlib import Path; print(Path.home())")
+          CLI_DIR="$REAL_HOME/.claude"
+          DESKTOP_DIR="$REAL_HOME/Library/Application Support/Claude"
+          CLI_CONFIG="$REAL_HOME/.claude.json"
+          DESKTOP_CONFIG="$DESKTOP_DIR/claude_desktop_config.json"
+          # Save originals if they exist
+          [ -f "$CLI_CONFIG" ] && cp "$CLI_CONFIG" "$CLI_CONFIG.bak" || true
+          [ -f "$DESKTOP_CONFIG" ] && cp "$DESKTOP_CONFIG" "$DESKTOP_CONFIG.bak" || true
+          # Ensure detection directories exist
+          mkdir -p "$CLI_DIR"
+          mkdir -p "$DESKTOP_DIR"
+          trap '
+            # Restore or remove config files
+            if [ -f "$CLI_CONFIG.bak" ]; then mv "$CLI_CONFIG.bak" "$CLI_CONFIG"; else rm -f "$CLI_CONFIG"; fi
+            if [ -f "$DESKTOP_CONFIG.bak" ]; then mv "$DESKTOP_CONFIG.bak" "$DESKTOP_CONFIG"; else rm -f "$DESKTOP_CONFIG"; fi
+          ' EXIT
+          # Install and verify both configs
+          "$BRIDGE" --install
+          python3 -c "
+          import json, sys
+          configs = [
+              ('CLI', '$CLI_CONFIG'),
+              ('Desktop', '$DESKTOP_CONFIG'),
+          ]
+          for name, path in configs:
+              config = json.load(open(path))
+              cmd = config.get('mcpServers', {}).get('claude-in-safari', {}).get('command', '')
+              if not cmd:
+                  print(f'FAIL: no claude-in-safari entry in {name} config')
+                  sys.exit(1)
+              print(f'OK: {name} claude-in-safari configured → {cmd}')
+          "
+          # Uninstall and verify both configs are cleaned up
+          "$BRIDGE" --uninstall
+          python3 -c "
+          import json, sys
+          configs = [
+              ('CLI', '$CLI_CONFIG'),
+              ('Desktop', '$DESKTOP_CONFIG'),
+          ]
+          for name, path in configs:
+              config = json.load(open(path))
+              if 'claude-in-safari' in config.get('mcpServers', {}):
+                  print(f'FAIL: claude-in-safari still present in {name} config after --uninstall')
+                  sys.exit(1)
+              print(f'OK: {name} --uninstall removed entry')
+          "
