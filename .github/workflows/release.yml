@@ -26,6 +26,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
@@ -207,18 +209,55 @@ jobs:
           mv "$DMG_PATH" "$TAGGED_DMG"
           echo "TAGGED_DMG=$TAGGED_DMG" >> "$GITHUB_ENV"
 
+      # ── Generate changelog ──────────────────────────────────────────────────
+      - name: Generate release notes
+        env:
+          TAG: ${{ github.ref_name }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Find the previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+
+          # Build changelog from merged PRs between tags
+          CHANGELOG=""
+          if [ -n "$PREV_TAG" ]; then
+            # Get merge date range for PR query
+            SINCE=$(git log -1 --format=%aI "$PREV_TAG")
+            PRS=$(gh pr list --state merged --base main \
+              --search "merged:>=${SINCE}" \
+              --json number,title \
+              --jq '.[] | "- \(.title) (#\(.number))"' 2>/dev/null || echo "")
+
+            if [ -n "$PRS" ]; then
+              CHANGELOG="$PRS"
+            else
+              # Fallback: commit messages (skip merge commits)
+              CHANGELOG=$(git log --oneline --no-merges "$PREV_TAG..$TAG" \
+                | sed 's/^[0-9a-f]* /- /')
+            fi
+          else
+            # First release — use all commits
+            CHANGELOG=$(git log --oneline --no-merges \
+              | sed 's/^[0-9a-f]* /- /')
+          fi
+
+          # Write the release body file
+          {
+            echo "## What's Changed"
+            echo ""
+            echo "$CHANGELOG"
+            echo ""
+            echo "**Full Changelog**: https://github.com/${REPO}/compare/${PREV_TAG:-}...${TAG}"
+          } > /tmp/release-body.md
+
       # ── GitHub Release ─────────────────────────────────────────────────────
       - name: Create GitHub Release (signed + notarized)
         if: env.APPLE_CERTIFICATE != '' && env.APPLE_ID != '' && env.TAGGED_DMG != ''
         uses: softprops/action-gh-release@v2
         with:
           name: "Claude in Safari ${{ github.ref_name }}"
-          body: |
-            ## Claude in Safari ${{ github.ref_name }}
-
-            Signed and notarized — drag **Claude in Safari.app** from the DMG to Applications and launch normally.
-
-            See [ROADMAP.md](https://github.com/${{ github.repository }}/blob/main/ROADMAP.md) for what's included in this version.
+          body_path: /tmp/release-body.md
           prerelease: ${{ startsWith(github.ref_name, 'v0.') }}
           files: |
             ClaudeInSafari-${{ github.ref_name }}.zip
@@ -229,12 +268,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: "Claude in Safari ${{ github.ref_name }}"
-          body: |
-            ## Claude in Safari ${{ github.ref_name }}
-
-            Signed but not notarized. On first launch macOS may show a Gatekeeper dialog — click **Open Anyway** in System Settings > Privacy & Security.
-
-            See [ROADMAP.md](https://github.com/${{ github.repository }}/blob/main/ROADMAP.md) for what's included in this version.
+          body_path: /tmp/release-body.md
           prerelease: ${{ startsWith(github.ref_name, 'v0.') }}
           files: |
             ClaudeInSafari-${{ github.ref_name }}.zip
@@ -245,11 +279,6 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: "Claude in Safari ${{ github.ref_name }}"
-          body: |
-            ## Claude in Safari ${{ github.ref_name }}
-
-            > **Pre-release build** — unsigned, for developers only. Requires Gatekeeper bypass to run (`xattr -cr "Claude in Safari.app"`).
-
-            See [ROADMAP.md](https://github.com/${{ github.repository }}/blob/main/ROADMAP.md) for what's included in this version.
+          body_path: /tmp/release-body.md
           prerelease: ${{ startsWith(github.ref_name, 'v0.') }}
           files: "ClaudeInSafari-${{ github.ref_name }}.zip"
