@@ -63,7 +63,8 @@ claude-safari-extension/
 │   │       │   ├── read-console.js          # read_console_messages: read captured console output
 │   │       │   ├── read-network.js          # read_network_requests: read captured network requests
 │   │       │   ├── upload-image.js          # upload_image: upload screenshot/image to page element
-│   │       │   └── file-upload.js           # file_upload: upload local file to file input
+│   │       │   ├── file-upload.js           # file_upload: upload local file to file input
+│   │       │   └── browser-batch.js         # browser_batch: run a sequence of tool calls in one round trip
 │   │       │
 │   │       ├── lib/                         # Third-party libraries
 │   │       │   └── gif.js                   # GIF encoder library
@@ -117,6 +118,7 @@ claude-safari-extension/
 │           ├── read-network.test.js
 │           ├── upload-image.test.js
 │           ├── file-upload.test.js
+│           ├── browser-batch.test.js
 │           ├── accessibility-tree.test.js
 │           ├── agent-visual-indicator.test.js
 │           ├── console-monitor.test.js

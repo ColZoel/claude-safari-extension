@@ -462,6 +462,35 @@ make send TOOL=gif_creator ARGS='{"action":"export","filename":"regression-nav.g
 - [ ] GIF contains at least 2 frames showing the two different pages
 - [ ] File written to `~/Desktop/regression-nav.gif`
 
+### 13.5  browser_batch — sequential happy path
+
+```fish
+make send TOOL=browser_batch ARGS='{"actions":[{"name":"navigate","input":{"url":"https://example.com"}},{"name":"find","input":{"query":"More information"}},{"name":"get_page_text","input":{}}]}'
+```
+
+- [ ] Safari navigates to example.com (first action ran)
+- [ ] Output is interleaved with `[1/3] navigate`, `[2/3] find`, `[3/3] get_page_text` markers
+- [ ] Ends with `Batch complete: 3/3 action(s) succeeded.`
+
+### 13.6  browser_batch — stop on first error
+
+```fish
+make send TOOL=browser_batch ARGS='{"actions":[{"name":"navigate","input":{"url":"https://example.com"}},{"name":"form_input","input":{"ref":"does-not-exist","value":"x"}},{"name":"get_page_text","input":{}}]}'
+```
+
+- [ ] navigate output is present (prior step preserved)
+- [ ] An `ERROR: action 2/3 (form_input) …` block appears
+- [ ] `get_page_text` did NOT run (no `[3/3]` output beyond the error)
+
+### 13.7  browser_batch — fast-fail: native tool rejected
+
+```fish
+make send TOOL=browser_batch ARGS='{"actions":[{"name":"computer","input":{"action":"screenshot"}}]}'
+make send TOOL=browser_batch ARGS='{"actions":[{"name":"gif_creator","input":{"action":"start_recording"}}]}'
+```
+
+- [ ] Both error with "does not support … call … standalone" (nothing executed)
+
 ---
 
 ## 14  Error & Edge Cases
