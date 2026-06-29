@@ -1117,7 +1117,9 @@ class ToolRouter: MCPSocketServerDelegate {
     private static let toolDefinitions: [[String: Any]] = [
         tool("tabs_context_mcp", "Get context information about the current MCP tab group.", [:]),
         tool("tabs_create_mcp", "Creates a new empty tab in the MCP tab group.", [:]),
-        tool("switch_browser", "Switch which browser is used for browser automation.", [:]),
+        tool("tabs_close_mcp", "Close a tab in the MCP tab group by its tab ID. Get valid IDs from tabs_context_mcp.", [
+            "tabId": prop("number", "Virtual tab ID (from tabs_context_mcp) of the tab to close")
+        ]),
         tool("navigate", "Navigate to a URL, or go forward/back in browser history.", [
             "url": prop("string", "The URL to navigate to, or 'forward'/'back'"),
             "tabId": prop("number", "Tab ID to navigate")

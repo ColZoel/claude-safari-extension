@@ -51,6 +51,10 @@ function makeBrowserMock(opts = {}) {
                 existingRealTabs[id] = tab;
                 return tab;
             }),
+            remove: jest.fn(async (tabId) => {
+                if (!existingRealTabs[tabId]) throw new Error(`No tab with id: ${tabId}`);
+                delete existingRealTabs[tabId];
+            }),
             query: jest.fn(async ({ active, currentWindow }) => {
                 return [existingRealTabs[activeTabId] ?? { id: activeTabId, url: "about:blank", title: "Active" }];
             }),
@@ -249,6 +253,100 @@ describe("tabs-manager", () => {
         const id1 = r1.match(/Tab (\d+)/)[1];
         const id2 = r2.match(/Tab (\d+)/)[1];
         expect(id1).not.toBe(id2);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// tabs_close_mcp (Spec 032)
+// ---------------------------------------------------------------------------
+
+describe("tabs_close_mcp", () => {
+    // Helper: create N tabs, return { tools, browser, vtids: [...] }.
+    async function withTabs(count, opts = {}) {
+        const browser = makeBrowserMock({ nextRealTabId: 600, ...opts });
+        const tools = loadModule(browser);
+        const vtids = [];
+        for (let i = 0; i < count; i++) {
+            const r = await tools["tabs_create_mcp"]({});
+            vtids.push(Number(r.match(/Tab (\d+)/)[1]));
+        }
+        return { tools, browser, vtids };
+    }
+
+    function storedGroups(browser) {
+        return browser.storage.session._raw["__claudeTabGroups"].groups;
+    }
+
+    // TC1: closes a tracked tab among several — removes the real tab and the
+    // virtual entry, leaves the rest of the group intact.
+    test("TC1: closes a tab in the group and removes its entry", async () => {
+        const { tools, browser, vtids } = await withTabs(2);
+        const groupId = Object.keys(storedGroups(browser))[0];
+        const targetRealId = storedGroups(browser)[groupId].tabs[vtids[0]].realTabId;
+
+        const result = await tools["tabs_close_mcp"]({ tabId: vtids[0] });
+
+        expect(result).toMatch(new RegExp(`Closed Tab ${vtids[0]}`));
+        expect(browser.tabs.remove).toHaveBeenCalledWith(targetRealId);
+        // Entry gone, sibling preserved, group still present.
+        const group = storedGroups(browser)[groupId];
+        expect(group.tabs[vtids[0]]).toBeUndefined();
+        expect(group.tabs[vtids[1]]).toBeDefined();
+    });
+
+    // TC2: closing the last tab in a group removes the group entirely.
+    test("TC2: closing the last tab removes the empty group", async () => {
+        const { tools, browser, vtids } = await withTabs(1);
+        const groupId = Object.keys(storedGroups(browser))[0];
+
+        const result = await tools["tabs_close_mcp"]({ tabId: vtids[0] });
+
+        expect(result).toMatch(/empty|removed/i);
+        expect(storedGroups(browser)[groupId]).toBeUndefined();
+    });
+
+    // TC3: a tabId not tracked by any group is rejected.
+    test("TC3: rejects a tabId not in the MCP group", async () => {
+        const { tools, browser } = await withTabs(1);
+        await expect(tools["tabs_close_mcp"]({ tabId: 9999 }))
+            .rejects.toThrow(/not in the MCP tab group/i);
+        expect(browser.tabs.remove).not.toHaveBeenCalled();
+    });
+
+    // TC4: missing / non-numeric tabId is an input-validation error.
+    test("TC4: rejects missing or non-numeric tabId", async () => {
+        const { tools } = await withTabs(1);
+        await expect(tools["tabs_close_mcp"]({})).rejects.toThrow(/numeric 'tabId'/);
+        await expect(tools["tabs_close_mcp"]({ tabId: "abc" })).rejects.toThrow(/numeric 'tabId'/);
+        await expect(tools["tabs_close_mcp"]({ tabId: null })).rejects.toThrow(/numeric 'tabId'/);
+    });
+
+    // TC5: if the real tab is already gone, treat as cleanup — remove the
+    // stale entry and report success rather than erroring.
+    test("TC5: already-closed real tab is cleaned up, not an error", async () => {
+        const { tools, browser, vtids } = await withTabs(1);
+        const groupId = Object.keys(storedGroups(browser))[0];
+        const realId = storedGroups(browser)[groupId].tabs[vtids[0]].realTabId;
+        browser.tabs.remove.mockRejectedValueOnce(new Error(`No tab with id: ${realId}`));
+
+        const result = await tools["tabs_close_mcp"]({ tabId: vtids[0] });
+
+        expect(result).toMatch(/already closed/i);
+        // Entry (and now-empty group) cleaned up.
+        expect(storedGroups(browser)[groupId]).toBeUndefined();
+    });
+
+    // TC6: a transient remove failure preserves the entry and rethrows, so a
+    // momentarily-unreachable tab is not silently dropped from the group.
+    test("TC6: transient remove failure preserves the entry and rethrows", async () => {
+        const { tools, browser, vtids } = await withTabs(1);
+        const groupId = Object.keys(storedGroups(browser))[0];
+        browser.tabs.remove.mockRejectedValueOnce(new Error("Extension context invalidated"));
+
+        await expect(tools["tabs_close_mcp"]({ tabId: vtids[0] }))
+            .rejects.toThrow(/context invalidated/i);
+        // Entry still present — not dropped on a transient failure.
+        expect(storedGroups(browser)[groupId].tabs[vtids[0]]).toBeDefined();
     });
 });
 
