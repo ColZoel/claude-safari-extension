@@ -295,11 +295,13 @@ class ToolRouter: MCPSocketServerDelegate {
     /// Set of tool names that use browser.tabs.executeScript and require Safari frontmost.
     /// Must include every tool whose extension handler calls executeScript via
     /// executeScriptWithTabGuard. Update when adding new executeScript-based tools.
+    /// `browser_batch` is included because its sub-actions (run extension-side)
+    /// call executeScript, so Safari must be frontmost before the batch is forwarded.
     /// Guarded by `testExecuteScriptToolsContainsAllExecuteScriptBasedTools` in ToolRouterTests.
     private static let executeScriptTools: Set<String> = [
         "computer", "find", "read_page", "form_input", "get_page_text",
         "javascript_tool", "read_console_messages", "read_network_requests",
-        "upload_image", "file_upload"
+        "upload_image", "file_upload", "browser_batch"
     ]
 
     /// Test-only accessor for executeScriptTools. Internal for @testable access.
@@ -1180,6 +1182,9 @@ class ToolRouter: MCPSocketServerDelegate {
             "tabId": prop("number", "Tab ID"),
             "filename": prop("string", "Optional filename for exported GIF (export action only)"),
             "options": prop("object", "Export overlay options: {showClicks, showActions, showProgress, showWatermark} (all boolean, export action only)")
+        ]),
+        tool("browser_batch", "Execute a sequence of browser tool calls in one round trip. Actions run sequentially and stop on the first error. Native tools (computer screenshot/zoom, file_upload, upload_image, gif_creator) are not supported inside a batch — call them standalone.", [
+            "actions": prop("array", "Ordered list of {name, input} tool calls. 'input' is the same object you'd pass to that tool standalone.")
         ])
     ]
 

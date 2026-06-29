@@ -1227,7 +1227,7 @@ final class ToolRouterDispatchTests: XCTestCase {
         let expected: Set<String> = [
             "computer", "find", "read_page", "form_input", "get_page_text",
             "javascript_tool", "read_console_messages", "read_network_requests",
-            "upload_image", "file_upload"
+            "upload_image", "file_upload", "browser_batch"
         ]
         XCTAssertEqual(ToolRouter.executeScriptToolsForTesting, expected,
                        "executeScriptTools is out of sync — update it when adding new executeScript-based tools")
