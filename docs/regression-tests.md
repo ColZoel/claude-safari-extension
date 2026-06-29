@@ -402,6 +402,35 @@ make send TOOL=tabs_create_mcp ARGS='{"url":"https://example.com"}'
 - [ ] New Safari tab opens with example.com
 - [ ] Returns virtual tab ID
 
+### 12.1  Fast-fail: tabs_close_mcp missing/non-numeric tabId
+
+```fish
+make send TOOL=tabs_close_mcp ARGS='{}'
+```
+
+- [ ] Errors with "requires a numeric 'tabId'" (no tab is closed)
+
+### 12.2  Fast-fail: tabs_close_mcp tabId not in group
+
+```fish
+make send TOOL=tabs_close_mcp ARGS='{"tabId":9999}'
+```
+
+- [ ] Errors with "not in the MCP tab group" (no tab is closed)
+
+### 12.3  E2E — close a tracked tab *(requires extension loaded)*
+
+```fish
+make send TOOL=tabs_create_mcp ARGS='{}'
+# Note the virtual tab ID (e.g. Tab 1)
+make send TOOL=tabs_close_mcp ARGS='{"tabId":<id>}'
+make send TOOL=tabs_context_mcp ARGS='{}'
+```
+
+- [ ] The corresponding Safari tab closes
+- [ ] Returns a "Closed Tab <id>" confirmation
+- [ ] `tabs_context_mcp` no longer lists that tab (group removed if it was the last tab)
+
 ---
 
 ## 13  Cross-Tool E2E Flows

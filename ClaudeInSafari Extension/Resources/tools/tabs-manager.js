@@ -1,7 +1,7 @@
 /**
  * Tabs Manager — virtual tab group management.
- * Implements: tabs_context_mcp, tabs_create_mcp, resolveTab (shared helper).
- * See Spec 013 (tabs-manager).
+ * Implements: tabs_context_mcp, tabs_create_mcp, tabs_close_mcp, resolveTab (shared helper).
+ * See Spec 013 (tabs-manager) and Spec 032 (tabs-close-mcp).
  */
 
 "use strict";
@@ -391,6 +391,94 @@ async function handleTabsCreateMcp(_args) {
 }
 
 // ---------------------------------------------------------------------------
+// Tool: tabs_close_mcp (Spec 032)
+// ---------------------------------------------------------------------------
+
+/**
+ * Close a tab in the MCP tab group by its virtual tab ID.
+ *
+ * Unlike page-acting tools, `tabId` is REQUIRED — a close must always name an
+ * explicit target, so there is no active-tab fallback. The full
+ * find → remove → delete sequence runs inside withTabGroupLock so it is atomic
+ * against concurrent tabs_create_mcp / tabs_context_mcp / resolveTab /
+ * pruneStaleGroups callers. The lock is held across browser.tabs.remove,
+ * matching the precedent in handleTabsCreateMcp (which holds the lock across
+ * browser.tabs.create); cost is one IPC round-trip while the lock is held.
+ *
+ * Throws (propagated out of the lock WITHOUT persisting any mutation) on:
+ *   - missing / non-numeric tabId,
+ *   - a tabId not tracked by any group,
+ *   - a transient browser.tabs.remove failure (entry is preserved).
+ * A definitive "tab gone" rejection is NOT an error: the orphaned virtual
+ * entry is removed as cleanup and a success message is returned.
+ *
+ * @param {{ tabId: number }} args
+ * @returns {Promise<string>} confirmation message
+ */
+async function handleTabsCloseMcp(args) {
+    const tabId = args && args.tabId;
+    if (typeof tabId !== "number" || Number.isNaN(tabId)) {
+        throw new Error(
+            "tabs_close_mcp requires a numeric 'tabId' (the virtual tab ID from tabs_context_mcp)"
+        );
+    }
+
+    return await withTabGroupLock(async (state) => {
+        // Locate the group that owns this virtual tab.
+        let ownerGroupId = null;
+        for (const [groupId, group] of Object.entries(state.groups)) {
+            if (group.tabs[tabId] !== undefined) {
+                ownerGroupId = groupId;
+                break;
+            }
+        }
+        if (ownerGroupId === null) {
+            throw new Error(
+                `Tab ${tabId} is not in the MCP tab group. Use tabs_context_mcp to list valid tab IDs.`
+            );
+        }
+
+        const group = state.groups[ownerGroupId];
+        const entry = group.tabs[tabId];
+
+        // Close the real tab (lock held across the IPC call — see JSDoc).
+        let alreadyGone = false;
+        try {
+            await browser.tabs.remove(entry.realTabId);
+        } catch (err) {
+            const msg = (err && err.message) || String(err);
+            if (TAB_GONE_PATTERN.test(msg)) {
+                // Tab was already closed out from under us — not an error.
+                // Fall through and remove the orphaned virtual entry.
+                alreadyGone = true;
+            } else {
+                // Transient failure (context invalidated, focus transition,
+                // native bridge hiccup). Preserve the entry and rethrow so a
+                // momentarily-unreachable tab is not silently dropped. The
+                // throw propagates out of withTabGroupLock without persisting.
+                throw err;
+            }
+        }
+
+        // Remove the virtual entry; cascade-delete the group if now empty.
+        delete group.tabs[tabId];
+        const groupEmpty = Object.keys(group.tabs).length === 0;
+        if (groupEmpty) {
+            delete state.groups[ownerGroupId];
+        }
+
+        if (alreadyGone) {
+            return `Tab ${tabId} was already closed; removed its stale entry from the MCP tab group.`;
+        }
+        if (groupEmpty) {
+            return `Closed Tab ${tabId}. The MCP tab group is now empty and has been removed.`;
+        }
+        const remaining = Object.keys(group.tabs).length;
+        return `Closed Tab ${tabId} (Group ${ownerGroupId}). ${remaining} tab(s) remain in the group.`;
+    });
+}
+
+// ---------------------------------------------------------------------------
 // Prune stale groups (Spec 025 §1)
 // ---------------------------------------------------------------------------
 
@@ -516,6 +604,7 @@ async function pruneStaleGroups() {
 
 registerTool("tabs_context_mcp", handleTabsContextMcp);
 registerTool("tabs_create_mcp", handleTabsCreateMcp);
+registerTool("tabs_close_mcp", handleTabsCloseMcp);
 
 // Expose resolveTab and pruneStaleGroups globally so other modules can use them
 if (typeof globalThis !== "undefined") {

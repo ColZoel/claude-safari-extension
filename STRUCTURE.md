@@ -59,7 +59,7 @@ claude-safari-extension/
 │   │       │   ├── javascript-tool.js       # javascript_tool: execute JS in page context
 │   │       │   ├── navigate.js              # navigate: URL navigation, history back/forward
 │   │       │   ├── get-page-text.js         # get_page_text: extract raw text from page
-│   │       │   ├── tabs-manager.js          # tabs_context_mcp + tabs_create_mcp: virtual tab groups
+│   │       │   ├── tabs-manager.js          # tabs_context_mcp + tabs_create_mcp + tabs_close_mcp: virtual tab groups
 │   │       │   ├── read-console.js          # read_console_messages: read captured console output
 │   │       │   ├── read-network.js          # read_network_requests: read captured network requests
 │   │       │   ├── upload-image.js          # upload_image: upload screenshot/image to page element
