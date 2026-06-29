@@ -36,3 +36,6 @@ node_modules/
 
 # Python
 __pycache__/
+
+# JetBrains IDE
+.idea/
