@@ -10,7 +10,30 @@ permissions:
   id-token: write
 
 jobs:
+  # Gate: the review jobs below require CLAUDE_CODE_OAUTH_TOKEN. The `secrets`
+  # context isn't available in a job-level `if:`, so we surface the secret's
+  # presence as a job output here and gate each review job on it. When the
+  # secret is absent, the review jobs are SKIPPED (neutral) instead of failing
+  # every PR — an optional review bot must not block the build gate.
+  check-secret:
+    runs-on: ubuntu-latest
+    outputs:
+      has_token: ${{ steps.check.outputs.has_token }}
+    steps:
+      - id: check
+        env:
+          TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CLAUDE_CODE_OAUTH_TOKEN is not set — skipping Claude PR review jobs. Add the secret under Settings → Secrets and variables → Actions to enable them."
+          fi
+
   review:
+    needs: check-secret
+    if: needs.check-secret.outputs.has_token == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -67,6 +90,8 @@ jobs:
             Get the commit SHA with: gh pr view PR_NUMBER --repo REPO --json headRefOid -q .headRefOid
 
   silent-failures:
+    needs: check-secret
+    if: needs.check-secret.outputs.has_token == 'true'
     runs-on: ubuntu-latest
     env:
       PR_REPO: ${{ github.repository }}
@@ -107,6 +132,8 @@ jobs:
             Get the commit SHA with: gh pr view $PR_NUMBER --repo $PR_REPO --json headRefOid -q .headRefOid
 
   test-coverage:
+    needs: check-secret
+    if: needs.check-secret.outputs.has_token == 'true'
     runs-on: ubuntu-latest
     env:
       PR_REPO: ${{ github.repository }}
